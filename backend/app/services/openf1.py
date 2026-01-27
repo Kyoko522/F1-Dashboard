@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class OpenF1Client:  # ✅ Fixed name
+class OpenF1Client:
     """
     Client for interacting with OpenF1 API
     Handles all requests to api.openf1.org
