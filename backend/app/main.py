@@ -132,13 +132,14 @@ async def get_driver(driver_number: int):
 '''
 TODO:
 
-# Already have:
-✅ GET / (root)
-✅ GET /api/drivers
-✅ GET /api/drivers/{driver_number}
+# Finished Get Methods:
+GET / (root)
+GET /api/drivers
+GET /api/drivers/{driver_number}
+GET /api/sessions                                       # List races
 
 # Need to add:
-1. GET /api/sessions                                       # List races
+1. 
 2. GET /api/location/{session_key}                         # Position data
 3. GET /api/telemetry/{session_key}                        # Car data
 4. GET /api/laps/{session_key}                            # Lap info
