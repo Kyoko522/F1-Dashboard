@@ -96,5 +96,54 @@ class OpenF1Client:  # ✅ Fixed name
         return None
 
 
-# Create a single instance to be used across the app
+'''
+TODO: 
+# Already have:
+✅ GET / (root)
+✅ GET /api/drivers
+✅ GET /api/drivers/{driver_number}
+
+# Need to add:
+1. GET /api/sessions                                       # List races
+2. GET /api/location/{session_key}                         # Position data
+3. GET /api/telemetry/{session_key}                        # Car data
+4. GET /api/laps/{session_key}                            # Lap info
+5. GET /api/positions/{session_key}                        # Race positions
+6. GET /api/intervals/{session_key}                        # Driver gaps
+7. GET /api/stints/{session_key}                          # Tire stints
+8. GET /api/pitstops/{session_key}                        # Pit stops
+'''
+
+
+def get_sessions(self, year: Optional[int] = None, session_type: Optional[str] = None, country_name: Optional[str] = None) -> Optional[List[Dict[Any, Any]]]:
+    """
+    Get sessions (races, qualifying, practice, etc.)
+    
+    Args:
+        year: Filter by year (e.g., 2024)
+        session_type: Filter by type ("Race", "Qualifying", "Practice 1", etc.)
+        country_name: Filter by country (e.g., "Monaco")
+    
+    Returns:
+        List of session dictionaries or None if request fails
+    
+    Example:
+        # Get all 2024 races
+        sessions = client.get_sessions(year=2024, session_type="Race")
+        
+        # Get Monaco GP sessions
+        sessions = client.get_sessions(country_name="Monaco")
+    """
+    # Build query parameters
+    params = {}
+    if year:
+        params["year"] = year
+    if session_type:
+        params["session_type"] = session_type
+    if country_name:
+        params["country_name"] = country_name
+    
+    # Use the _make_request helper method
+    return self._make_request("/sessions", params=params)
+
 openf1_client = OpenF1Client() 
