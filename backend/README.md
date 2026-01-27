@@ -36,7 +36,7 @@ GET http://localhost:8000/api/drivers/1
 
 ### Get Car Locations (for replay)
 ```
-GET http://localhost:8000/api/location/{session_key}?driver_number=1
+GET http://localhost:8000/api/location/9161?driver_number=1
 ```
 
 ### Get Telemetry Data
