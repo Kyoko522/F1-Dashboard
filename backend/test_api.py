@@ -12,7 +12,7 @@ try:
     
     # Check status code
     if response.status_code == 200:
-        print("✅ Success! Status code: 200\n")
+        print(" Success! Status code: 200\n")
         
         # Try to parse JSON
         try:

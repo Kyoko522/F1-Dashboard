@@ -2,7 +2,6 @@ import requests
 from typing import Optional, List, Dict, Any
 import logging
 
-# Set up logging (helps debug issues)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
