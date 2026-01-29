@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.openf1 import openf1_client
-from typing import Optional
+from typing import Any, Optional
 
 
 # Creating a fastAPI instance
@@ -205,6 +205,254 @@ async def get_sessions(
         raise
     except Exception as e:
         # Handle any other errors
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+    
+@app.get("/api/location/{session_key}")
+async def get_location_data(
+    session_key: int,
+    driver_number: Optional[int] = None,
+    date: Optional[str] = None
+):
+    """
+    Get car location data (X, Y, Z coordinates) for a session
+    
+    Path Parameters:
+        session_key: Unique session identifier
+    
+    Query Parameters:
+        driver_number: Optional - filter by specific driver
+        date: Optional - filter by timestamp
+    """
+    try:
+        # Call the client method
+        location_data = openf1_client.get_location_data(
+            session_key=session_key,
+            driver_number=driver_number,
+            date=date
+        )
+        
+        # Check for failure
+        if location_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Failed to fetch location data from OpenF1 API"
+            )
+        
+        # Return formatted response
+        return {
+            "success": True,
+            "session_key": session_key,
+            "driver_number": driver_number,
+            # "record_count": len(location_data),
+            "data": location_data
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+    
+@app.get("/api/telemetry/{session_key}")
+async def get_telemetry(
+    session_key: int,
+    driver_number: Optional[int] = None,
+    speed: Optional[int] = None,
+    throttle: Optional[int] = None,
+    brake: Optional[int] = None,
+    drs: Optional[int] = None,
+    rpm: Optional[int] = None,
+    n_gear: Optional[int] = None
+):
+    """
+    Get car telemetry data (speed, throttle, brake, gear, RPM, DRS)
+    
+    Path Parameters:
+        session_key: Unique session identifier
+    
+    Query Parameters:
+        driver_number: Optional - filter by specific driver
+        speed: Optional - minimum speed (km/h)
+        throttle: Optional - minimum throttle (%)
+        brake: Optional - minimum brake pressure
+        drs: Optional - specific DRS status
+        rpm: Optional - minimum RPM
+        n_gear: Optional - specific gear number
+    
+    Returns:
+        Telemetry data with speed, throttle, brake, gear, RPM, DRS
+    
+    Warning:
+        Without driver_number, returns 100,000+ records!
+    
+    Example URLs:
+        GET /api/telemetry/9159?driver_number=55
+        GET /api/telemetry/9159?driver_number=55&speed=300
+        GET /api/telemetry/9159?driver_number=55&throttle=98
+        GET /api/telemetry/9159?driver_number=1&n_gear=8
+    """
+    try:
+        # Call the client method
+        telemetry_data = openf1_client.get_car_data(
+            session_key=session_key,
+            driver_number=driver_number,
+            speed=speed,
+            throttle=throttle,
+            brake=brake,
+            drs=drs,
+            rpm=rpm,
+            n_gear=n_gear
+        )
+        
+        # Check for failure
+        if telemetry_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Failed to fetch telemetry data from OpenF1 API"
+            )
+        
+        # Return formatted response
+        return {
+            "success": True,
+            "session_key": session_key,
+            "driver_number": driver_number,
+            "filters": {
+                "speed": speed,
+                "throttle": throttle,
+                "brake": brake,
+                "drs": drs,
+                "rpm": rpm,
+                "n_gear": n_gear
+            },
+            "record_count": len(telemetry_data),
+            "data": telemetry_data
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+@app.get("/api/laps/{session_key}")
+async def get_laps(
+
+    session_key: int,
+    driver_number: Optional[int] = None,
+    lap_number: Optional[int] = None
+):
+    """
+    Get lap timing data for a session
+    
+    Path Parameters:
+        session_key: Unique session identifier
+    
+    Query Parameters:
+        driver_number: Optional - filter by specific driver
+        lap_number: Optional - filter by specific lap number
+    
+    Returns:
+        Lap data including sector times, lap duration, speeds, etc.
+    
+    Example URLs:
+        GET /api/laps/9161
+        GET /api/laps/9161?driver_number=63
+        GET /api/laps/9161?driver_number=63&lap_number=8
+    """
+    try:
+        # Call the client method
+        laps_data = openf1_client.get_laps_data(
+            session_key=session_key,
+            driver_number=driver_number,
+            lap_number=lap_number
+        )
+        
+        # Check for failure
+        if laps_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Failed to fetch lap data from OpenF1 API"
+            )
+        
+        # Return formatted response
+        return {
+            "success": True,
+            "session_key": session_key,
+            "driver_number": driver_number,
+            "lap_number": lap_number,
+            "record_count": len(laps_data),
+            "data": laps_data
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+    
+@app.get("/api/positions/{session_key}")
+async def get_positions(
+    session_key: int,
+    driver_name: Optional[str] = None,
+    driver_number: Optional[int] = None,
+    position: Optional[int] = None
+):
+    """
+    Get position data for drivers in a session
+    
+    Path Parameters:
+        session_key: Unique session identifier
+    
+    Query Parameters:
+        driver_number: Optional - filter by specific driver
+        position: Optional - filter by specific position (1=P1, 2=P2, etc.)
+    
+    Returns:
+        Position data showing race position changes over time
+    
+    Use Cases:
+        - Track position changes throughout race
+        - See when driver was in P1, P2, P3
+        - Analyze overtakes and position swaps
+        - Race replay position display
+    """
+    try:
+        # Call the client method
+        position_data = openf1_client.get_position_data(
+            session_key=session_key,
+            driver_number=driver_number,
+            position=position
+        )
+        
+        # Check for failure
+        if position_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Failed to fetch position data from OpenF1 API"
+            )
+        
+        # Return formatted response
+        return {
+            "success": True,
+            "session_key": session_key,
+            "driver_number": driver_number,
+            "position_filter": position, 
+            "record_count": len(position_data),
+            "data": position_data
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
