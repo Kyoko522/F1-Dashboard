@@ -35,7 +35,12 @@ class F1DataLoader:
             f"{self.base_url}/api/telemetry/{session_key}",
             params={"driver_number": driver_number}
         )
-    # def get_weather(self, session_key: int) -> List[Dict]:
-    #     response = requests.get(f"{self.base_url}/api/weather/{session_key}")
-    #     f"{self.base_url}/api/weather/{session_key}"
         return response.json()["data"]
+
+    def get_intervals(self, session_key: int) -> List[Dict]:
+        response = requests.get(f"{self.base_url}/api/intervals/{session_key}")
+        return response.json()["data"]
+    
+    def get_pit_stops(self, session_key: int, driver_number: int) -> List[Dict]:
+        repsonse = requests.get(f"{self.base_url}/api/pit_stops/{session_key}")
+        return repsonse.json()["data"]
