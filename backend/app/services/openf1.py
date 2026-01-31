@@ -11,7 +11,7 @@ class OpenF1Client:
     Client for interacting with OpenF1 API
     Handles all requests to api.openf1.org
     """
-    
+
     def __init__(self):
         """Initialize the client with base URL"""
         self.base_url = "https://api.openf1.org/v1"
@@ -161,5 +161,8 @@ class OpenF1Client:
             params["driver_number"] = driver_number
         
         return self._make_request("/pit", params=params)
-
+    
+    def get_weather(self, session_key: int) -> Optional[List[Dict[Any, Any]]]:
+        pass
+    
 openf1_client = OpenF1Client()
