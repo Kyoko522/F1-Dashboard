@@ -41,6 +41,22 @@ class F1DataLoader:
         response = requests.get(f"{self.base_url}/api/intervals/{session_key}")
         return response.json()["data"]
     
-    def get_pit_stops(self, session_key: int, driver_number: int) -> List[Dict]:
-        repsonse = requests.get(f"{self.base_url}/api/pit_stops/{session_key}")
-        return repsonse.json()["data"]
+    def get_pit_stops(self, session_key: int) -> List[Dict]:
+        response = requests.get(f"{self.base_url}/api/pitstops/{session_key}")
+        return response.json()["data"]
+    
+    def get_laps(self, session_key: int, driver_number: Optional[int] = None) -> List[Dict]:
+        params = {"driver_number": driver_number} if driver_number else {}
+        response = requests.get(
+            f"{self.base_url}/api/laps/{session_key}",
+            params=params
+        )
+        return response.json()["data"]
+    
+    def get_stints(self, session_key: int, driver_number: Optional[int] = None) -> List[Dict]:
+        params = {"driver_number": driver_number} if driver_number else {}
+        response = requests.get(
+            f"{self.base_url}/api/stints/{session_key}",
+            params=params
+        )
+        return response.json()["data"]

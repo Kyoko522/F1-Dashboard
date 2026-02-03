@@ -106,7 +106,7 @@ class OpenF1Client:
             params["brake"] = f">={brake}"
         
         if drs:
-            params["drs"] = drs  # DRS is exact match, not >=
+            params["drs"] = drs
         
         if rpm:
             params["rpm"] = f">={rpm}"
@@ -164,5 +164,5 @@ class OpenF1Client:
     
     def get_weather(self, session_key: int) -> Optional[List[Dict[Any, Any]]]:
         pass
-    
+
 openf1_client = OpenF1Client()

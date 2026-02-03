@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.services.openf1 import openf1_client
 from typing import Optional
 
-
 # Creating a FastAPI instance
 app = FastAPI(
     title="F1 Racing Dashboard API",
