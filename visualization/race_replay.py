@@ -1,4 +1,9 @@
+import matplotlib
+matplotlib.use('TkAgg')
+
 import matplotlib.pyplot as plt
+plt.rcParams['toolbar'] = 'None'
+
 import matplotlib.animation as animation
 from matplotlib.patches import Circle, Rectangle
 from matplotlib.widgets import Button, Slider
@@ -11,7 +16,7 @@ class RaceSelectionGUI:
     
     COLORS = {
         'background': '#15151e',
-        'terminal_bg': '#1a1a2e',
+        'terminal_bg': '#15151e',
         'border': '#e10600',
         'selected': '#e10600',
         'text': '#ffffff',
@@ -22,8 +27,9 @@ class RaceSelectionGUI:
     }
     
     def __init__(self):
+        plt.ioff()
         self.loader = F1DataLoader()
-        self.selected_year = 2023
+        self.selected_year = 2024
         self.selected_session_key = None
         self.selected_session_name = None
         self.selected_drivers = []
@@ -38,7 +44,7 @@ class RaceSelectionGUI:
         plt.rcParams['figure.facecolor'] = self.COLORS['background']
         
         self.fig = plt.figure(figsize=(16, 10), facecolor=self.COLORS['background'])
-        self.fig.canvas.manager.set_window_title('F1 Race Replay Terminal')
+        self.fig.canvas.manager.set_window_title('F1 Race Terminal')
         
         self.key_connection = self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
         
@@ -54,6 +60,8 @@ class RaceSelectionGUI:
             self.handle_session_keys(event)
         elif self.current_page == 'driver':
             self.handle_driver_keys(event)
+        elif self.current_page == 'Pridict':
+            self.current_page = 'pridict'
         
         self.fig.canvas.draw_idle()
     
@@ -318,10 +326,10 @@ class RaceSelectionGUI:
     
     def start_replay(self):
         if not self.selected_drivers:
-            print("⚠️  Please select at least one driver")
+            print(" Please select at least one driver")
             return
         
-        print(f"\n🎬 Starting replay...")
+        print(f"\n Starting replay...")
         print(f"   Session: {self.selected_session_key}")
         print(f"   Drivers: {self.selected_drivers}")
         
