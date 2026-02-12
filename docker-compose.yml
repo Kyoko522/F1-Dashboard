@@ -1,0 +1,50 @@
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: f1-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MPLBACKEND=Agg
+    volumes:
+      - ./ai_engine/fastf1_cache:/app/ai_engine/fastf1_cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  visualization:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: f1-visualization
+    depends_on:
+      - backend
+    command: ["python", "visualization/race_replay.py"]
+    environment:
+      - MPLBACKEND=TkAgg
+      - DISPLAY=${DISPLAY:-:0}
+      - F1_API_URL=http://f1-backend:8000
+    volumes:
+      - ./ai_engine/models:/app/ai_engine/models
+      - ./ai_engine/fastf1_cache:/app/ai_engine/fastf1_cache
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    network_mode: host
+
+  ai-training:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: f1-ai-training
+    command: ["python", "ai_engine/f1_predictor.py"]
+    environment:
+      - MPLBACKEND=Agg
+    volumes:
+      - ./ai_engine/models:/app/ai_engine/models
+      - ./ai_engine/fastf1_cache:/app/ai_engine/fastf1_cache
