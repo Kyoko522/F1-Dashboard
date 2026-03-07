@@ -165,4 +165,24 @@ class OpenF1Client:
     def get_weather(self, session_key: int) -> Optional[List[Dict[Any, Any]]]:
         pass
 
+    def get_driver_championship(self, session_key: int, point_current: Optional[int] = None, points_start: Optional[int] = None, position_current: Optional[int] = None, position_start: Optional[int] = None) -> Optional[List[Dict[Any, Any]]]:
+        params = {"session_key": session_key}
+
+        if position_current:
+            params["position_current"] = position_current
+
+        if points_start:
+            params["points_start"] = points_start
+
+        if points_current:
+            params["points_current"] = points_current
+
+        if position_start:
+            params["position_start"] = position_start
+
+        return self._make_request("/championship_drivers", params=params)
+
+
+
+
 openf1_client = OpenF1Client()
