@@ -26,6 +26,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# All Endpoints Below
+
 @app.get("/")
 async def root():
     return {
@@ -35,6 +37,7 @@ async def root():
         "endpoints": {
             "drivers": "/api/drivers",
             "driver_by_number": "/api/drivers/{driver_number}",
+            "get_driver_championship": "/api/championship/{session_key}", # i think that how to access it
             "sessions": "/api/sessions",
             "location": "/api/location/{session_key}",
             "telemetry": "/api/telemetry/{session_key}",
@@ -141,6 +144,7 @@ async def get_sessions(
     
 @app.get("/api/location/{session_key}")
 async def get_location_data(
+    meeting_key: Optional[int] = None,
     session_key: int,
     driver_number: Optional[int] = None,
     date: Optional[str] = None
@@ -149,6 +153,7 @@ async def get_location_data(
         location_data = openf1_client.get_location_data(
             session_key=session_key,
             driver_number=driver_number,
+            meeting_key=meeting_key,
             date=date
         )
         
@@ -161,6 +166,7 @@ async def get_location_data(
         return {
             "success": True,
             "session_key": session_key,
+            "meeting_key": meeting_key,
             "driver_number": driver_number,
             "record_count": len(location_data),
             "data": location_data
@@ -219,6 +225,46 @@ async def get_telemetry(
             "data": telemetry_data
         }
     
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+@app.get("/api/championship/{session_key}")
+async def get_driver_championship(
+    session_key: int,
+    points_current: int,
+    points_start: int,
+    position_current: int,
+    position_start: int
+):
+    try:
+        championship_data = openf1_client.get_driver_championship(
+            session_key=session_key,
+            points_current=points_current,
+            points_start=points_start,
+            position_current=position_current,
+            position_start=position_start
+        )
+
+        if championship_data is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Failed to fetch championship data from OpenF1 API"
+            )
+
+        return{
+            "success": True,
+            "session_key": session_key,
+            "points_start": points_start,
+            "points_current": points_current,
+            "position_current": position_current,
+            "position_start": position_start
+        }
+
     except HTTPException:
         raise
     except Exception as e:
