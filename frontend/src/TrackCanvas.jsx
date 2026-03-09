@@ -1,6 +1,27 @@
 import { useEffect, useRef } from "react"
 
-const COLORS = ["#e10600", "#00aaff", "#00ff88", "#ffcc00"]
+const TEAM_COLORS = {
+    1: "#3671C6",
+    11: "#3671C6",
+    16: "#E8002D",
+    55: "#E8002D",
+    44: "#27F4D2",
+    63: "#27F4D2",
+    4: "#FF8000",
+    81: "#FF8000",
+    14: "#358C75",
+    18: "#358C75",
+    10: "#0093CC",
+    31: "#0093CC",
+    23: "#64C4FF",
+    2: "#64C4FF",
+    22: "#6692FF",
+    3: "#6692FF",
+    77: "#C92D4B",
+    24: "#C92D4B",
+    20: "#B6BABD",
+    27: "#B6BABD",
+}
 
 export default function TrackCanvas({ trackData, driverLocations, selectedDrivers, animIndex, drivers }) {
     const canvasRef = useRef(null)
@@ -40,7 +61,7 @@ export default function TrackCanvas({ trackData, driverLocations, selectedDriver
         ctx.stroke()
 
         // Draw driver dots
-        selectedDrivers.forEach((driver, colorIndex) => {
+        selectedDrivers.forEach((driver) => {
             const points = driverLocations[driver.driver_number]
             if (!points || points.length === 0) return
 
@@ -49,7 +70,7 @@ export default function TrackCanvas({ trackData, driverLocations, selectedDriver
             if (!point) return
 
             const { cx, cy } = toCanvas(point.x, point.y)
-            const color = COLORS[colorIndex % COLORS.length]
+            const color = TEAM_COLORS[driver.driver_number] || "#ffffff"
 
             // Dot
             ctx.beginPath()
