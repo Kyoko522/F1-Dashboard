@@ -9,6 +9,7 @@ function App() {
     const [selectedDriver, setSelectedDriver] = useState(null)
     const [telemetry, setTelemetry] = useState([])
     const [currentIndex, setCurrentIndex] = useState(0)
+    const [positions, setPositions] = useState([])
 
     useEffect(() => {
         fetch(`${API}/api/sessions?year=2024`)
@@ -22,23 +23,6 @@ function App() {
             .then(res => res.json())
             .then(data => setDrivers(data.data))
     }, [selectedSession])
-
-    useEffect(() => {
-      if (telemetry.length === 0) return
-      console.log("telemetry loaded", telemetry.length, "first record:", telemetry[0])
-      console.log("starting interval")
-      const interval = setInterval(() => {
-        setCurrentIndex(prev => {
-          console.log("index:", prev)
-          if (prev >= telemetry.length - 1) {
-            clearInterval(interval)
-            return prev
-          }
-          return prev + 1
-        })
-      }, 100)
-      return () => clearInterval(interval)
-    }, [telemetry])
 
     useEffect(() => {
       if (!selectedDriver || !selectedSession) return
@@ -64,6 +48,13 @@ function App() {
       }, 100)
       return () => clearInterval(interval)
     }, [telemetry])
+
+    useEffect(() => {
+        if (!selectedSession) return
+        fetch(`${API}/api/positions/${selectedSession.session_key}`)
+            .then(res => res.json())
+            .then(data => setPositions(data.data))
+    }, [selectedSession])
 
     return (
         <div>
@@ -111,6 +102,20 @@ function App() {
                             <p>DRS: {telemetry[currentIndex].drs}</p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {positions.length > 0 && (
+                      <div>
+                        <h3>Leaderboard</h3>
+                        <ol>
+                            {positions.slice(0, 20).map((p, i) => {
+                            const driver = drivers.find(d => d.driver_number === p.driver_number)
+                            return (
+                                <li key={i}>P{p.position} - #{p.driver_number} - {driver ? driver.full_name : ""}</li>
+                            )
+                        })}
+                        </ol>
                       </div>
                     )}
                 </div>
