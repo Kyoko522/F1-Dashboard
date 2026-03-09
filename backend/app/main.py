@@ -144,8 +144,8 @@ async def get_sessions(
     
 @app.get("/api/location/{session_key}")
 async def get_location_data(
-    meeting_key: Optional[int] = None,
     session_key: int,
+    meeting_key: Optional[int] = None,
     driver_number: Optional[int] = None,
     date: Optional[str] = None
 ):
