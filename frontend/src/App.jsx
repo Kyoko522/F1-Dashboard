@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import TrackCanvas from "./TrackCanvas.jsx"
 import Loading from "./Loading.jsx"
 import TEAM_COLORS from "./teamColors.js"
@@ -22,6 +22,7 @@ function App() {
     const [loadingDrivers, setLoadingDrivers] = useState(false)
     const [loadingTelemetry, setLoadingTelemetry] = useState(false)
     const [isPlaying, setIsPlaying] = useState(true)
+    const fetchingRef = useRef(new Set())
 
     useEffect(() => {
         fetch(`${API}/api/sessions?year=${selectedYear}`)
@@ -102,8 +103,12 @@ function App() {
     useEffect(() => {
         if (!selectedSession) return
 
-        const missing = selectedDrivers.filter(d => !driverLocations[d.driver_number])
+        const missing = selectedDrivers.filter(d =>
+            !driverLocations[d.driver_number] && !fetchingRef.current.has(d.driver_number)
+        )
         if (missing.length === 0) return
+
+        missing.forEach(d => fetchingRef.current.add(d.driver_number))
 
         const fetchAll = async () => {
             setLoadingDrivers(true)
@@ -112,6 +117,7 @@ function App() {
                     const res = await fetch(`${API}/api/location/${selectedSession.session_key}?driver_number=${driver.driver_number}`)
                     const data = await res.json()
                     const points = data.data.filter(p => p.x !== 0 && p.y !== 0)
+                    fetchingRef.current.delete(driver.driver_number)
                     return { driver_number: driver.driver_number, points }
                 })
             )
@@ -183,6 +189,7 @@ function App() {
         if (selectedDrivers.length === drivers.length) {
             setSelectedDrivers([])
             setDriverLocations({})
+            fetchingRef.current.clear()
         } else {
             setSelectedDrivers(drivers)
         }
@@ -202,6 +209,7 @@ function App() {
                             setDrivers([])
                             setSelectedDrivers([])
                             setDriverLocations({})
+                            fetchingRef.current.clear()
                         }}
                         style={{
                             background: selectedYear === year ? "#e10600" : "#1a1a2e",
@@ -230,6 +238,7 @@ function App() {
                             setSelectedDriver(null)
                             setTelemetry([])
                             setIsPlaying(true)
+                            fetchingRef.current.clear()
                         }}
                         style={{
                             background: selectedSession?.session_key === session.session_key ? "#e10600" : "#1a1a2e",
