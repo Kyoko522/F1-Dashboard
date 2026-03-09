@@ -153,7 +153,6 @@ async def get_location_data(
         location_data = openf1_client.get_location_data(
             session_key=session_key,
             driver_number=driver_number,
-            meeting_key=meeting_key,
             date=date
         )
         
