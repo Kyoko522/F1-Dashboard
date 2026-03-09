@@ -24,6 +24,7 @@ class F1DataLoader:
             f"{self.base_url}/api/location/{session_key}",
             params={"driver_number": driver_number}
         )
+        print("location response:", response.json())
         return response.json()["data"]
     
     def get_positions(self, session_key: int) -> List[Dict]:
