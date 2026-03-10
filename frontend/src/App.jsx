@@ -3,7 +3,7 @@ import TrackCanvas from "./TrackCanvas.jsx"
 import Loading from "./Loading.jsx"
 import TEAM_COLORS from "./teamColors.js"
 
-const API = "http://localhost:8000"
+const API = "https://f1-dashboard-production.up.railway.app"
 
 function App() {
     const [selectedYear, setSelectedYear] = useState(2024)
