@@ -24,7 +24,7 @@ function App() {
     const [loadingDrivers, setLoadingDrivers] = useState(false)
     const [loadingTelemetry, setLoadingTelemetry] = useState(false)
     const [isPlaying, setIsPlaying] = useState(true)
-    const [mobile, setMobile] = useState(true)
+    const [mobile, setMobile] = useState(isMobile())
     const [activeTab, setActiveTab] = useState("track")
     const fetchingRef = useRef(new Set())
 
