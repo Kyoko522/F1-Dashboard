@@ -16,7 +16,7 @@ const TEAM_COLORS = {
 export default function TrackCanvas({ trackData, driverLocations, selectedDrivers, animIndex, drivers }) {
     const canvasRef = useRef(null)
     const containerRef = useRef(null)
-    const [size, setSize] = useState({ w: 600, h: 330 })
+    const [size, setSize] = useState({ w: 1600, h: 540 })
 
     useEffect(() => {
         let timeout
@@ -98,7 +98,7 @@ export default function TrackCanvas({ trackData, driverLocations, selectedDriver
                 ref={canvasRef}
                 width={size.w}
                 height={size.h}
-                style={{ background: "#0a0a1a", borderRadius: "8px", width: "100%", display: "block" }}
+                style={{ background: "#0a0a1a", borderRadius: "8px", display: "block" }}
             />
         </div>
     )
