@@ -5,6 +5,8 @@ import TEAM_COLORS from "./teamColors.js"
 
 const API = "https://f1-dashboard-production.up.railway.app"
 
+const isMobile = () => window.innerWidth < 768
+
 function App() {
     const [selectedYear, setSelectedYear] = useState(2024)
     const [sessions, setSessions] = useState([])
@@ -22,7 +24,15 @@ function App() {
     const [loadingDrivers, setLoadingDrivers] = useState(false)
     const [loadingTelemetry, setLoadingTelemetry] = useState(false)
     const [isPlaying, setIsPlaying] = useState(true)
+    const [mobile, setMobile] = useState(true)
+    const [activeTab, setActiveTab] = useState("track")
     const fetchingRef = useRef(new Set())
+
+    useEffect(() => {
+        const handleResize = () => setMobile(isMobile())
+        window.addEventListener("resize", handleResize)
+        return () => window.removeEventListener("resize", handleResize)
+    }, [])
 
     useEffect(() => {
         fetch(`${API}/api/sessions?year=${selectedYear}`)
@@ -53,22 +63,15 @@ function App() {
         if (!telemetry.length || !selectedDriver) return
         const locationPoints = driverLocations[selectedDriver.driver_number]
         if (!locationPoints || !locationPoints.length) return
-
         const currentPoint = locationPoints[Math.min(animIndex, locationPoints.length - 1)]
         if (!currentPoint?.date) return
-
         const currentTime = new Date(currentPoint.date).getTime()
-
         let closest = 0
         let minDiff = Infinity
         for (let i = 0; i < telemetry.length; i++) {
             const diff = Math.abs(new Date(telemetry[i].date).getTime() - currentTime)
-            if (diff < minDiff) {
-                minDiff = diff
-                closest = i
-            } else {
-                break
-            }
+            if (diff < minDiff) { minDiff = diff; closest = i }
+            else break
         }
         setCurrentIndex(closest)
     }, [animIndex])
@@ -90,10 +93,7 @@ function App() {
                 for (let i = 1; i < points.length; i++) {
                     const dx = Math.abs(points[i].x - points[i-1].x)
                     const dy = Math.abs(points[i].y - points[i-1].y)
-                    if (dx + dy > 10) {
-                        startIndex = Math.max(0, i - 5)
-                        break
-                    }
+                    if (dx + dy > 10) { startIndex = Math.max(0, i - 5); break }
                 }
                 setRaceStartIndex(startIndex)
                 setTrackData(points)
@@ -102,14 +102,11 @@ function App() {
 
     useEffect(() => {
         if (!selectedSession) return
-
         const missing = selectedDrivers.filter(d =>
             !driverLocations[d.driver_number] && !fetchingRef.current.has(d.driver_number)
         )
         if (missing.length === 0) return
-
         missing.forEach(d => fetchingRef.current.add(d.driver_number))
-
         const fetchAll = async () => {
             setLoadingDrivers(true)
             const results = await Promise.all(
@@ -123,9 +120,7 @@ function App() {
             )
             setDriverLocations(prev => {
                 const updated = { ...prev }
-                for (const { driver_number, points } of results) {
-                    updated[driver_number] = points
-                }
+                for (const { driver_number, points } of results) updated[driver_number] = points
                 return updated
             })
             setLoadingDrivers(false)
@@ -136,9 +131,7 @@ function App() {
     useEffect(() => {
         if (Object.keys(driverLocations).length === 0) return
         if (!isPlaying) return
-        const interval = setInterval(() => {
-            setAnimIndex(prev => prev + 1)
-        }, 100)
+        const interval = setInterval(() => setAnimIndex(prev => prev + 1), 100)
         return () => clearInterval(interval)
     }, [Object.keys(driverLocations).length, isPlaying])
 
@@ -153,27 +146,21 @@ function App() {
 
     const liveLeaderboard = useMemo(() => {
         if (!positions.length) return []
-
         const byDriver = {}
         for (const p of positions) {
             if (!byDriver[p.driver_number]) byDriver[p.driver_number] = []
             byDriver[p.driver_number].push(p)
         }
-
         const snapshot = Object.entries(byDriver).map(([driverNum, pts]) => {
             let best = pts[0]
             if (currentTime) {
                 for (const p of pts) {
-                    if (new Date(p.date).getTime() <= currentTime) {
-                        best = p
-                    } else {
-                        break
-                    }
+                    if (new Date(p.date).getTime() <= currentTime) best = p
+                    else break
                 }
             }
             return { driver_number: parseInt(driverNum), position: best.position }
         })
-
         return snapshot.sort((a, b) => a.position - b.position)
     }, [positions, currentTime])
 
@@ -195,244 +182,190 @@ function App() {
         }
     }
 
+    const tabBtn = (id, label) => (
+        <button
+            onClick={() => setActiveTab(id)}
+            style={{
+                flex: 1,
+                background: activeTab === id ? "#e10600" : "#1a1a2e",
+                color: "white",
+                border: "1px solid #333",
+                padding: "8px",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontFamily: "monospace"
+            }}
+        >
+            {label}
+        </button>
+    )
+
+    const LeaderboardPanel = () => (
+        <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
+            <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>LEADERBOARD</h3>
+            {(liveLeaderboard.length > 0 ? liveLeaderboard : positions).slice(0, 20).map((p, i) => {
+                const driver = drivers.find(d => d.driver_number === p.driver_number)
+                const color = TEAM_COLORS[p.driver_number] || "#ffffff"
+                return (
+                    <div key={i} style={{ display: "flex", gap: "8px", padding: "4px 0", borderBottom: "1px solid #222", fontSize: "13px" }}>
+                        <span style={{ color: "#888", width: "30px" }}>P{p.position}</span>
+                        <span style={{ color }}>{driver ? driver.full_name.split(" ").pop() : `#${p.driver_number}`}</span>
+                    </div>
+                )
+            })}
+        </div>
+    )
+
+    const TrackPanel = () => (
+        <div style={{ background: "#16213e", borderRadius: "8px", padding: "12px" }}>
+            <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>RACE TRACK - {selectedSession.country_name}</h3>
+            {loadingDrivers ? <Loading message="Loading driver positions..." /> : (
+                <TrackCanvas
+                    trackData={trackData}
+                    driverLocations={driverLocations}
+                    selectedDrivers={selectedDrivers}
+                    animIndex={animIndex}
+                    drivers={drivers}
+                />
+            )}
+            {Object.keys(driverLocations).length > 0 && (
+                <div style={{ marginTop: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <button
+                            onClick={() => setIsPlaying(prev => !prev)}
+                            style={{ background: "#e10600", color: "white", border: "none", padding: "4px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "12px", flexShrink: 0 }}
+                        >
+                            {isPlaying ? "⏸" : "▶"}
+                        </button>
+                        <input
+                            type="range"
+                            min={0}
+                            max={Math.max(...Object.values(driverLocations).map(pts => pts.length)) - 1}
+                            value={animIndex}
+                            onChange={e => { setIsPlaying(false); setAnimIndex(Number(e.target.value)) }}
+                            style={{ flex: 1, accentColor: "#e10600", cursor: "pointer" }}
+                        />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#555", marginTop: "4px" }}>
+                        <span>START</span><span>END</span>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+
+    const TelemetryPanel = () => (
+        <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
+            <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>TELEMETRY</h3>
+            {selectedDriver && <p style={{ color: "#888", margin: "0 0 8px 0", fontSize: "12px" }}>{selectedDriver.full_name}</p>}
+            {loadingTelemetry ? <Loading message="Loading telemetry..." /> : telemetry.length > 0 ? (
+                <div style={{ fontSize: "13px", lineHeight: "2" }}>
+                    {[
+                        { label: "SPEED", value: `${telemetry[currentIndex].speed} km/h`, color: "#00ff88" },
+                        { label: "THROTTLE", value: `${telemetry[currentIndex].throttle}%`, color: "#00aaff" },
+                        { label: "BRAKE", value: telemetry[currentIndex].brake ? "ON" : "OFF", color: "#ff4444" },
+                        { label: "GEAR", value: telemetry[currentIndex].n_gear, color: "white" },
+                        { label: "RPM", value: telemetry[currentIndex].rpm, color: "white" },
+                        { label: "DRS", value: telemetry[currentIndex].drs > 10 ? "OPEN" : "CLOSED", color: telemetry[currentIndex].drs > 10 ? "#00ff88" : "#888" },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} style={{ display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ color: "#888" }}>{label}</span>
+                            <span style={{ color }}>{value}</span>
+                        </div>
+                    ))}
+                </div>
+            ) : <p style={{ color: "#555", fontSize: "12px" }}>Select a driver</p>}
+        </div>
+    )
+
+    const DriversPanel = () => (
+        <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
+            <h3 style={{ color: "#e10600", margin: "0 0 4px 0" }}>DRIVERS</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <p style={{ color: "#555", fontSize: "11px", margin: 0 }}>Click to track. TEL for telemetry.</p>
+                <button
+                    onClick={selectAll}
+                    style={{ background: selectedDrivers.length === drivers.length ? "#e10600" : "#1a1a2e", color: "white", border: "1px solid #333", padding: "2px 6px", borderRadius: "4px", cursor: "pointer", fontSize: "10px" }}
+                >
+                    {selectedDrivers.length === drivers.length ? "CLEAR" : "ALL"}
+                </button>
+            </div>
+            {drivers.map(driver => (
+                <div key={driver.driver_number} style={{ padding: "5px", cursor: "pointer", background: selectedDrivers.find(d => d.driver_number === driver.driver_number) ? "#e10600" : "transparent", borderRadius: "4px", marginBottom: "2px", fontSize: "12px", display: "flex", justifyContent: "space-between" }}>
+                    <span onClick={() => toggleDriver(driver)}>#{driver.driver_number} {driver.full_name}</span>
+                    <span onClick={() => {
+                        setSelectedDriver(driver)
+                        setSelectedDrivers(prev => prev.find(d => d.driver_number === driver.driver_number) ? prev : [...prev, driver])
+                        if (mobile) setActiveTab("telemetry")
+                    }} style={{ color: "#888", fontSize: "10px" }}>TEL</span>
+                </div>
+            ))}
+        </div>
+    )
+
     return (
-        <div style={{ background: "#0a0a1a", minHeight: "100vh", color: "white", padding: "20px", fontFamily: "monospace" }}>
-            <h1 style={{ color: "#e10600", textAlign: "center", marginBottom: "20px" }}>F1 DASHBOARD</h1>
+        <div style={{ background: "#0a0a1a", minHeight: "100vh", color: "white", padding: mobile ? "12px" : "20px", fontFamily: "monospace" }}>
+            <h1 style={{ color: "#e10600", textAlign: "center", marginBottom: "20px", fontSize: mobile ? "20px" : "28px" }}>F1 DASHBOARD</h1>
 
             <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "12px" }}>
                 {[2023, 2024, 2025].map(year => (
-                    <button
-                        key={year}
-                        onClick={() => {
-                            setSelectedYear(year)
-                            setSelectedSession(null)
-                            setDrivers([])
-                            setSelectedDrivers([])
-                            setDriverLocations({})
-                            fetchingRef.current.clear()
-                        }}
-                        style={{
-                            background: selectedYear === year ? "#e10600" : "#1a1a2e",
-                            color: "white",
-                            border: "1px solid #333",
-                            padding: "8px 20px",
-                            cursor: "pointer",
-                            borderRadius: "4px",
-                            fontSize: "14px"
-                        }}
-                    >
+                    <button key={year} onClick={() => {
+                        setSelectedYear(year)
+                        setSelectedSession(null)
+                        setDrivers([])
+                        setSelectedDrivers([])
+                        setDriverLocations({})
+                        fetchingRef.current.clear()
+                    }} style={{ background: selectedYear === year ? "#e10600" : "#1a1a2e", color: "white", border: "1px solid #333", padding: "8px 20px", cursor: "pointer", borderRadius: "4px", fontSize: "14px" }}>
                         {year}
                     </button>
                 ))}
             </div>
 
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px", justifyContent: "center" }}>
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "20px", justifyContent: "center" }}>
                 {sessions.map(session => (
-                    <button
-                        key={session.session_key}
-                        onClick={() => {
-                            setSelectedSession(session)
-                            setSelectedDrivers([])
-                            setDriverLocations({})
-                            setAnimIndex(0)
-                            setSelectedDriver(null)
-                            setTelemetry([])
-                            setIsPlaying(true)
-                            fetchingRef.current.clear()
-                        }}
-                        style={{
-                            background: selectedSession?.session_key === session.session_key ? "#e10600" : "#1a1a2e",
-                            color: "white",
-                            border: "1px solid #333",
-                            padding: "6px 12px",
-                            cursor: "pointer",
-                            borderRadius: "4px",
-                            fontSize: "12px"
-                        }}
-                    >
+                    <button key={session.session_key} onClick={() => {
+                        setSelectedSession(session)
+                        setSelectedDrivers([])
+                        setDriverLocations({})
+                        setAnimIndex(0)
+                        setSelectedDriver(null)
+                        setTelemetry([])
+                        setIsPlaying(true)
+                        fetchingRef.current.clear()
+                        setActiveTab("track")
+                    }} style={{ background: selectedSession?.session_key === session.session_key ? "#e10600" : "#1a1a2e", color: "white", border: "1px solid #333", padding: "6px 10px", cursor: "pointer", borderRadius: "4px", fontSize: mobile ? "11px" : "12px" }}>
                         {session.country_name}
                     </button>
                 ))}
             </div>
 
             {selectedSession && (
-                <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
-
-                    {/* LEFT - Leaderboard */}
-                    <div style={{ width: "220px", background: "#16213e", padding: "12px", borderRadius: "8px", flexShrink: 0 }}>
-                        <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>LEADERBOARD</h3>
-                        {(liveLeaderboard.length > 0 ? liveLeaderboard : positions).slice(0, 20).map((p, i) => {
-                            const driver = drivers.find(d => d.driver_number === p.driver_number)
-                            const color = TEAM_COLORS[p.driver_number] || "#ffffff"
-                            return (
-                                <div key={i} style={{
-                                    display: "flex",
-                                    gap: "8px",
-                                    padding: "4px 0",
-                                    borderBottom: "1px solid #222",
-                                    fontSize: "13px"
-                                }}>
-                                    <span style={{ color: "#888", width: "30px" }}>P{p.position}</span>
-                                    <span style={{ color: color }}>
-                                        {driver ? driver.full_name.split(" ").pop() : `#${p.driver_number}`}
-                                    </span>
-                                </div>
-                            )
-                        })}
-                    </div>
-
-                    {/* CENTER - Track */}
-                    <div style={{ flex: 1, background: "#16213e", borderRadius: "8px", padding: "12px" }}>
-                        <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>RACE TRACK - {selectedSession.country_name}</h3>
-                        {loadingDrivers ? (
-                            <Loading message="Loading driver positions..." />
-                        ) : (
-                            <TrackCanvas
-                                trackData={trackData}
-                                driverLocations={driverLocations}
-                                selectedDrivers={selectedDrivers}
-                                animIndex={animIndex}
-                                drivers={drivers}
-                            />
-                        )}
-
-                        {/* Timeline */}
-                        {Object.keys(driverLocations).length > 0 && (
-                            <div style={{ marginTop: "12px" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                    <button
-                                        onClick={() => setIsPlaying(prev => !prev)}
-                                        style={{
-                                            background: "#e10600",
-                                            color: "white",
-                                            border: "none",
-                                            padding: "4px 12px",
-                                            borderRadius: "4px",
-                                            cursor: "pointer",
-                                            fontSize: "12px",
-                                            flexShrink: 0
-                                        }}
-                                    >
-                                        {isPlaying ? "⏸" : "▶"}
-                                    </button>
-                                    <input
-                                        type="range"
-                                        min={0}
-                                        max={Math.max(...Object.values(driverLocations).map(pts => pts.length)) - 1}
-                                        value={animIndex}
-                                        onChange={e => {
-                                            setIsPlaying(false)
-                                            setAnimIndex(Number(e.target.value))
-                                        }}
-                                        style={{ flex: 1, accentColor: "#e10600", cursor: "pointer" }}
-                                    />
-                                </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#555", marginTop: "4px" }}>
-                                    <span>START</span>
-                                    <span>END</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* RIGHT - Telemetry + Drivers */}
-                    <div style={{ width: "220px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "12px" }}>
-
-                        <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
-                            <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>TELEMETRY</h3>
-                            {selectedDriver && <p style={{ color: "#888", margin: "0 0 8px 0", fontSize: "12px" }}>{selectedDriver.full_name}</p>}
-                            {loadingTelemetry ? (
-                                <Loading message="Loading telemetry..." />
-                            ) : telemetry.length > 0 ? (
-                                <div style={{ fontSize: "13px", lineHeight: "2" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <span style={{ color: "#888" }}>SPEED</span>
-                                        <span style={{ color: "#00ff88" }}>{telemetry[currentIndex].speed} km/h</span>
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <span style={{ color: "#888" }}>THROTTLE</span>
-                                        <span style={{ color: "#00aaff" }}>{telemetry[currentIndex].throttle}%</span>
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <span style={{ color: "#888" }}>BRAKE</span>
-                                        <span style={{ color: "#ff4444" }}>{telemetry[currentIndex].brake ? "ON" : "OFF"}</span>
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <span style={{ color: "#888" }}>GEAR</span>
-                                        <span style={{ color: "white" }}>{telemetry[currentIndex].n_gear}</span>
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <span style={{ color: "#888" }}>RPM</span>
-                                        <span style={{ color: "white" }}>{telemetry[currentIndex].rpm}</span>
-                                    </div>
-                                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                        <span style={{ color: "#888" }}>DRS</span>
-                                        <span style={{ color: telemetry[currentIndex].drs > 10 ? "#00ff88" : "#888" }}>
-                                            {telemetry[currentIndex].drs > 10 ? "OPEN" : "CLOSED"}
-                                        </span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <p style={{ color: "#555", fontSize: "12px" }}>Select a driver</p>
-                            )}
+                mobile ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {/* Mobile Tab Bar */}
+                        <div style={{ display: "flex", borderRadius: "8px", overflow: "hidden", border: "1px solid #333" }}>
+                            {tabBtn("track", "🏎 TRACK")}
+                            {tabBtn("leaderboard", "🏆 LEAD")}
+                            {tabBtn("telemetry", "📊 TEL")}
+                            {tabBtn("drivers", "👥 DRIVERS")}
                         </div>
 
-                        <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
-                            <h3 style={{ color: "#e10600", margin: "0 0 4px 0" }}>DRIVERS</h3>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                <p style={{ color: "#555", fontSize: "11px", margin: 0 }}>Click to track. TEL for telemetry.</p>
-                                <button
-                                    onClick={selectAll}
-                                    style={{
-                                        background: selectedDrivers.length === drivers.length ? "#e10600" : "#1a1a2e",
-                                        color: "white",
-                                        border: "1px solid #333",
-                                        padding: "2px 6px",
-                                        borderRadius: "4px",
-                                        cursor: "pointer",
-                                        fontSize: "10px",
-                                        flexShrink: 0
-                                    }}
-                                >
-                                    {selectedDrivers.length === drivers.length ? "CLEAR" : "ALL"}
-                                </button>
-                            </div>
-                            {drivers.map(driver => (
-                                <div
-                                    key={driver.driver_number}
-                                    style={{
-                                        padding: "5px",
-                                        cursor: "pointer",
-                                        background: selectedDrivers.find(d => d.driver_number === driver.driver_number) ? "#e10600" : "transparent",
-                                        borderRadius: "4px",
-                                        marginBottom: "2px",
-                                        fontSize: "12px",
-                                        display: "flex",
-                                        justifyContent: "space-between"
-                                    }}
-                                >
-                                    <span onClick={() => toggleDriver(driver)}>
-                                        #{driver.driver_number} {driver.full_name}
-                                    </span>
-                                    <span
-                                        onClick={() => {
-                                            setSelectedDriver(driver)
-                                            setSelectedDrivers(prev => {
-                                                const exists = prev.find(d => d.driver_number === driver.driver_number)
-                                                if (exists) return prev
-                                                return [...prev, driver]
-                                            })
-                                        }}
-                                        style={{ color: "#888", fontSize: "10px" }}
-                                    >
-                                        TEL
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-
+                        {activeTab === "track" && <TrackPanel />}
+                        {activeTab === "leaderboard" && <LeaderboardPanel />}
+                        {activeTab === "telemetry" && <TelemetryPanel />}
+                        {activeTab === "drivers" && <DriversPanel />}
                     </div>
-                </div>
+                ) : (
+                    <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                        <div style={{ width: "220px", flexShrink: 0 }}><LeaderboardPanel /></div>
+                        <div style={{ flex: 1 }}><TrackPanel /></div>
+                        <div style={{ width: "220px", flexShrink: 0, display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <TelemetryPanel />
+                            <DriversPanel />
+                        </div>
+                    </div>
+                )
             )}
         </div>
     )
