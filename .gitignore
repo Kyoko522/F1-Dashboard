@@ -26,3 +26,7 @@ Thumbs.db
 
 # Logs
 *.logai_engine/
+
+
+# Protyping
+ai_engine/
