@@ -13,15 +13,25 @@ import usePlayback from "../hooks/usePlayback"
 
 const isMobile = () => window.innerWidth < 768
 
-const TAB_BUTTON_STYLE = (isActive) => ({
+const TABS = [
+    { id: "track",       label: "TRACK"   },
+    { id: "leaderboard", label: "LEAD"    },
+    { id: "telemetry",   label: "TEL"     },
+    { id: "drivers",     label: "DRIVERS" },
+]
+
+const tabButtonStyle = (isActive) => ({
     flex: 1,
+    minHeight: "44px",       // mobile touch target minimum
     background: isActive ? "#e10600" : "#1a1a2e",
     color: "white",
-    border: "1px solid #333",
-    padding: "8px",
+    border: "none",
+    borderRight: "1px solid #333",
     cursor: "pointer",
     fontSize: "12px",
     fontFamily: "monospace",
+    fontWeight: isActive ? "700" : "400",
+    letterSpacing: "0.5px",
 })
 
 export default function Dashboard() {
@@ -52,7 +62,6 @@ export default function Dashboard() {
         currentTime, sessionBounds, togglePlay,
     } = usePlayback(driverLocations)
 
-    // Keep telemetry index in sync with playback position
     useEffect(() => {
         if (!telemetry.length || !selectedDriver || currentTime == null) return
         let closest = 0, minDiff = Infinity
@@ -113,11 +122,18 @@ export default function Dashboard() {
         setPlaybackOffset(value)
     }
 
-    const leaderboard = <Leaderboard positions={positions} currentTime={currentTime} drivers={drivers} />
+    const leaderboard = (
+        <Leaderboard
+            positions={positions}
+            currentTime={currentTime}
+            drivers={drivers}
+            mobile={mobile}
+        />
+    )
 
     const trackPanel = (
-        <div style={{ background: "#16213e", borderRadius: "8px", padding: "12px" }}>
-            <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>
+        <div style={{ background: "#16213e", borderRadius: mobile ? "0" : "8px", padding: mobile ? "12px" : "12px" }}>
+            <h3 style={{ color: "#e10600", margin: "0 0 12px 0", fontSize: mobile ? "14px" : "16px" }}>
                 RACE TRACK — {selectedSession?.country_name}
             </h3>
             {loadingSession ? <Loading message="Loading session data..." /> :
@@ -138,6 +154,7 @@ export default function Dashboard() {
                     onTogglePlay={togglePlay}
                     onSpeedChange={setSpeed}
                     onSeek={handleSeek}
+                    mobile={mobile}
                 />
             )}
         </div>
@@ -149,6 +166,7 @@ export default function Dashboard() {
             currentIndex={currentIndex}
             selectedDriver={selectedDriver}
             loadingTelemetry={loadingTelemetry}
+            mobile={mobile}
         />
     )
 
@@ -159,39 +177,45 @@ export default function Dashboard() {
             onToggleDriver={toggleDriver}
             onSelectAll={selectAll}
             onSelectTelemetry={selectTelemetry}
+            mobile={mobile}
         />
     )
 
     return (
-        <div style={{ background: "#0a0a1a", minHeight: "100vh", color: "white", padding: mobile ? "12px" : "20px", fontFamily: "monospace" }}>
-            <h1 style={{ color: "#e10600", textAlign: "center", marginBottom: "20px", fontSize: mobile ? "20px" : "28px" }}>
+        <div style={{ background: "#0a0a1a", minHeight: "100vh", color: "white", padding: mobile ? "0" : "20px", fontFamily: "monospace" }}>
+            <h1 style={{ color: "#e10600", textAlign: "center", margin: mobile ? "0" : "0 0 20px 0", padding: mobile ? "16px 12px 12px" : "0", fontSize: mobile ? "18px" : "28px", letterSpacing: "2px" }}>
                 F1 DASHBOARD
             </h1>
 
-            <SessionSelector
-                years={years}
-                selectedYear={selectedYear}
-                onYearChange={handleYearChange}
-                sessions={sessions}
-                selectedSession={selectedSession}
-                onSessionChange={handleSessionChange}
-                mobile={mobile}
-            />
+            <div style={{ padding: mobile ? "0 12px" : "0" }}>
+                <SessionSelector
+                    years={years}
+                    selectedYear={selectedYear}
+                    onYearChange={handleYearChange}
+                    sessions={sessions}
+                    selectedSession={selectedSession}
+                    onSessionChange={handleSessionChange}
+                    mobile={mobile}
+                />
+            </div>
 
             {selectedSession && (
                 mobile ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        <div style={{ display: "flex", borderRadius: "8px", overflow: "hidden", border: "1px solid #333" }}>
-                            {["track", "leaderboard", "telemetry", "drivers"].map((tab, i) => (
-                                <button key={tab} onClick={() => setActiveTab(tab)} style={TAB_BUTTON_STYLE(activeTab === tab)}>
-                                    {["TRACK", "LEAD", "TEL", "DRIVERS"][i]}
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                        {/* Tab bar — sticky so it stays in view while scrolling content */}
+                        <div style={{ display: "flex", position: "sticky", top: 0, zIndex: 10, borderTop: "1px solid #333", borderBottom: "1px solid #333" }}>
+                            {TABS.map(({ id, label }) => (
+                                <button key={id} onClick={() => setActiveTab(id)} style={tabButtonStyle(activeTab === id)}>
+                                    {label}
                                 </button>
                             ))}
                         </div>
-                        {activeTab === "track"       && trackPanel}
-                        {activeTab === "leaderboard" && leaderboard}
-                        {activeTab === "telemetry"   && telemetryPanel}
-                        {activeTab === "drivers"     && driverSelector}
+                        <div style={{ padding: "12px" }}>
+                            {activeTab === "track"       && trackPanel}
+                            {activeTab === "leaderboard" && leaderboard}
+                            {activeTab === "telemetry"   && telemetryPanel}
+                            {activeTab === "drivers"     && driverSelector}
+                        </div>
                     </div>
                 ) : (
                     <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>

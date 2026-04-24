@@ -1,9 +1,9 @@
-// Leaderboard — displays live race standings sorted by current position at playback time.
+// Leaderboard — live race standings sorted by current position. Larger rows on mobile.
 
 import { useMemo } from "react"
 import TEAM_COLORS from "../utils/teamColors"
 
-export default function Leaderboard({ positions, currentTime, drivers }) {
+export default function Leaderboard({ positions, currentTime, drivers, mobile }) {
     const liveLeaderboard = useMemo(() => {
         if (!positions.length) return []
         const byDriver = {}
@@ -28,13 +28,28 @@ export default function Leaderboard({ positions, currentTime, drivers }) {
 
     return (
         <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
-            <h3 style={{ color: "#e10600", margin: "0 0 12px 0" }}>LEADERBOARD</h3>
+            <h3 style={{ color: "#e10600", margin: "0 0 10px 0", fontSize: mobile ? "14px" : "16px" }}>LEADERBOARD</h3>
             {entries.slice(0, 20).map((entry, i) => {
                 const driver = drivers.find(d => d.driver_number === entry.driver_number)
                 const color = TEAM_COLORS[entry.driver_number] || "#ffffff"
+                // Top 3 get gold / silver / bronze position labels
+                const posColor = entry.position === 1 ? "#FFD700" : entry.position === 2 ? "#C0C0C0" : entry.position === 3 ? "#CD7F32" : "#555"
                 return (
-                    <div key={i} style={{ display: "flex", gap: "8px", padding: "4px 0", borderBottom: "1px solid #222", fontSize: "13px" }}>
-                        <span style={{ color: "#888", width: "30px" }}>P{entry.position}</span>
+                    <div
+                        key={i}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            minHeight: mobile ? "44px" : "auto",
+                            padding: mobile ? "0 4px" : "4px 0",
+                            borderBottom: "1px solid #1a2a4a",
+                            fontSize: mobile ? "14px" : "13px",
+                        }}
+                    >
+                        <span style={{ color: posColor, width: "32px", fontWeight: "700", flexShrink: 0 }}>
+                            P{entry.position}
+                        </span>
                         <span style={{ color }}>
                             {driver ? driver.full_name.split(" ").pop() : `#${entry.driver_number}`}
                         </span>
