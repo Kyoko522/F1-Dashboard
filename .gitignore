@@ -61,7 +61,7 @@ htmlcov/
 # Docker
 *.env.docker
 
-# Jupyter (if used for ML)
+# Jupyter
 .ipynb_checkpoints/
 *.ipynb
 
