@@ -49,9 +49,13 @@ export default function TrackCanvas({ trackData, driverLocations, selectedDriver
     useEffect(() => {
         if (!trackData.length) { trackCacheRef.current = null; return }
         const { w: W, h: H } = size
-        const xs = trackData.map(p => p.x), ys = trackData.map(p => p.y)
-        const minX = Math.min(...xs), maxX = Math.max(...xs)
-        const minY = Math.min(...ys), maxY = Math.max(...ys)
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+        for (const p of trackData) {
+            if (p.x < minX) minX = p.x
+            if (p.x > maxX) maxX = p.x
+            if (p.y < minY) minY = p.y
+            if (p.y > maxY) maxY = p.y
+        }
         const scale = Math.min(W / (maxX - minX), H / (maxY - minY)) * 0.85
         const offX = (W - (maxX - minX) * scale) / 2
         const offY = (H - (maxY - minY) * scale) / 2

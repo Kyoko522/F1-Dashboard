@@ -26,9 +26,16 @@ export default function usePlayback(driverLocations) {
     const sessionBounds = useMemo(() => {
         const allDrivers = Object.values(driverLocations)
         if (!allDrivers.length) return null
-        const allPts = allDrivers.flat()
-        const rawStart = Math.min(...allPts.map(p => p.t))
-        const end = Math.max(...allPts.map(p => p.t))
+        // Avoid Math.min/max spread — with 20 drivers and thousands of points each
+        // the array can exceed JS's argument limit and overflow the call stack.
+        let rawStart = Infinity, end = -Infinity
+        for (const pts of allDrivers) {
+            for (const p of pts) {
+                if (p.t < rawStart) rawStart = p.t
+                if (p.t > end) end = p.t
+            }
+        }
+        if (!isFinite(rawStart)) return null
 
         let raceStart = rawStart
         const scanEnd = rawStart + (end - rawStart) * 0.3
