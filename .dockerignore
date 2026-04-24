@@ -1,0 +1,55 @@
+# Keep the Docker build context small and fast.
+# These files are either too large, not needed inside the container,
+# or should not be baked into the image.
+
+# Python cache - gets rebuilt inside the container anyway
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments - we use pip inside Docker, not venv
+venv/
+.venv/
+env/
+.env/
+
+# Old requirements files - replaced by the Dockerfile
+requirements*.txt
+
+# Trained model files - these are mounted as volumes, not baked in.
+# This keeps the image size down and means models are not lost on rebuild.
+ai_engine/models/
+
+# FastF1 cache - can be hundreds of MB, mounted as a volume instead
+ai_engine/fastf1_cache/
+
+# Git history - not needed at runtime
+.git/
+.gitignore
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS noise
+.DS_Store
+
+# Test files
+tests/
+*.test.py
+
+# Documentation
+*.md
+docs/
+
+# Environment variable files - should never go into an image
+.env
+.env.local
+.env.*
