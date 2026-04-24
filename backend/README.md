@@ -1,137 +1,146 @@
-# F1 Dashboard API - Quick Start
+# F1 Dashboard — Backend
 
-## 🚀 Starting the Backend
+FastAPI backend serving F1 telemetry and session data via the FastF1 library.
+
+---
+
+## Quick Start
+
 ```bash
 cd backend
+cp .env.example .env        # set FASTF1_CACHE_DIR and CORS_ORIGIN
 source venv/bin/activate
-uvicorn app.main:app --reload
+uvicorn main:app --reload   # runs on http://localhost:8000
 ```
 
-Server runs at: **http://localhost:8000**
+Or use the convenience script:
+```bash
+bash start.sh
+```
+
+Interactive API docs: **http://localhost:8000/docs**
 
 ---
 
-## 📖 API Documentation
+## Structure
 
-Interactive docs: **http://localhost:8000/docs**
+```
+backend/
+├── main.py               ← Entry point: app setup, middleware, router registration ONLY
+├── .env.example          ← Copy to .env and fill in values (never commit .env)
+├── requirements.txt
+├── start.sh
+└── app/
+    ├── models/
+    │   └── schemas.py    ← All Pydantic response models live here
+    ├── routes/
+    │   ├── sessions.py   ← GET /api/sessions
+    │   ├── drivers.py    ← GET /api/drivers, /api/session_init
+    │   ├── telemetry.py  ← GET /api/location, /api/telemetry
+    │   └── race_data.py  ← GET /api/positions, /api/laps, /api/stints, /api/pitstops
+    ├── services/
+    │   └── fastf1_service.py  ← Business logic: session cache + all data extraction
+    └── ml/
+        ├── data_loader.py     ← Fetches raw race data for ML training
+        └── predictor.py       ← Race winner, lap time, pit strategy, championship models
+```
+
+**Architecture rules:**
+- `main.py` — only `FastAPI()`, `add_middleware()`, `include_router()`. No logic.
+- `routes/` — thin handlers: validate input → call service → return response.
+- `services/` — all business logic and data transformation.
+- `models/` — all Pydantic schemas. No logic, data shapes only.
 
 ---
 
-## 🔗 Available Endpoints
+## API Reference
 
-### Get All Races
+### Sessions
 ```
-GET http://localhost:8000/api/sessions?year=2024&session_type=Race
+GET /api/sessions?year=2024&session_type=Race
 ```
+Returns all races for a year. `session_type` can be: `Race`, `Qualifying`, `Sprint`, `Practice 1–3`.
 
-### Get Drivers for a Session
+### Session Init (combined call)
 ```
-GET http://localhost:8000/api/drivers?session_key=latest
+GET /api/session_init/2024_1_R
 ```
+Returns drivers, positions, and track outline in one request. Use this instead of calling each separately.
 
-### Get Specific Driver
+### Drivers
 ```
-GET http://localhost:8000/api/drivers/1
-```
-
-### Get Car Locations (for replay)
-```
-GET http://localhost:8000/api/location/9161?driver_number=1
+GET /api/drivers/2024_1_R
 ```
 
-### Get Telemetry Data
+### GPS Location (track replay)
 ```
-GET http://localhost:8000/api/telemetry/{session_key}?driver_number=1
+GET /api/location/2024_1_R/1
+```
+Returns downsampled X/Y position time-series for driver #1.
+
+### Telemetry
+```
+GET /api/telemetry/2024_1_R/1
+```
+Returns speed, throttle, brake, gear, RPM, DRS sampled every 5th point.
+
+### Race Positions
+```
+GET /api/positions/2024_1_R
 ```
 
-### Get Lap Times
+### Laps
 ```
-GET http://localhost:8000/api/laps/{session_key}?driver_number=1
-```
-
-### Get Race Positions
-```
-GET http://localhost:8000/api/positions/{session_key}
+GET /api/laps/2024_1_R
+GET /api/laps/2024_1_R?driver_number=1
+GET /api/laps/2024_1_R?driver_number=1&lap_number=10
 ```
 
-### Get Driver Gaps
+### Stints
 ```
-GET http://localhost:8000/api/intervals/{session_key}
-```
-
-### Get Pit Stops
-```
-GET http://localhost:8000/api/pitstops/{session_key}
+GET /api/stints/2024_1_R
+GET /api/stints/2024_1_R?driver_number=1
 ```
 
-### Get Tire Stints
+### Pit Stops
 ```
-GET http://localhost:8000/api/stints/{session_key}
+GET /api/pitstops/2024_1_R
+GET /api/pitstops/2024_1_R?driver_number=1
 ```
 
 ---
 
-## 💡 Quick Tips
+## Session Key Format
 
-- Use `/docs` for interactive testing
-- `session_key=latest` gets most recent session
-- All endpoints return JSON
-- Add `?driver_number=X` to filter by driver
+`{year}_{round_number}_{session_type_code}`
+
+| Code | Session |
+|---|---|
+| `R` | Race |
+| `Q` | Qualifying |
+| `S` | Sprint |
+| `FP1` / `FP2` / `FP3` | Practice sessions |
+| `SQ` | Sprint Qualifying |
+
+**Example:** `2024_1_R` = 2024 Bahrain Grand Prix Race
 
 ---
 
-## 🛠️ Current Status
+## Session Caching
 
-✅ Backend API with OpenF1 integration  
-⏳ Race replay visualization - Coming soon
+The service maintains a thread-safe LRU cache of up to 5 loaded sessions in memory.
+
+- **First load:** 10–30 seconds (FastF1 downloads from official F1 timing feeds and writes to `FASTF1_CACHE_DIR`)
+- **Repeat load (same session):** instant (served from the in-memory cache)
+- **On-disk cache:** persists across server restarts via `FASTF1_CACHE_DIR`
 
 ---
 
-## 📚 Development Pattern (Learning Reference)
+## Environment Variables
 
-All endpoints follow this consistent pattern:
+| Variable | Default | Description |
+|---|---|---|
+| `FASTF1_CACHE_DIR` | `/tmp/fastf1_cache` | Where FastF1 stores downloaded session files |
+| `CORS_ORIGIN` | `http://localhost:5173` | Allowed frontend origin |
 
-### In `openf1.py` (API Client Methods)
-```python
-def get_SOMETHING(self, required_param, optional_param=None):
-    """
-    Docstring explaining what this does
-    """
-    # Build params dict
-    params = {"required": required_param}
-    if optional_param:
-        params["optional"] = optional_param
-    
-    # Make request
-    return self._make_request("/endpoint", params=params)
-```
-
-### In `main.py` (FastAPI Endpoints)
-```python
-@app.get("/api/something")
-async def get_something(required_param: int, optional_param: Optional[str] = None):
-    """
-    Docstring explaining the endpoint
-    """
-    try:
-        # Call the client method
-        data = openf1_client.get_SOMETHING(required_param, optional_param)
-        
-        # Check for failure
-        if data is None:
-            raise HTTPException(status_code=503, detail="API failed")
-        
-        # Return formatted response
-        return {
-            "success": True,
-            "count": len(data),
-            "data": data
-        }
-    
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-```
-
-**Pattern used for:** Sessions, Location, Telemetry, Laps, Positions, Intervals, Pit Stops, Stints
+Copy `.env.example` → `.env` and set values. `.env` is in `.gitignore` and must never be committed.
