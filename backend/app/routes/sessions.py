@@ -1,10 +1,21 @@
-# Sessions router — handles /api/sessions endpoint only.
+# Sessions router — handles /api/years and /api/sessions endpoints.
 
 import asyncio
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from app.services.fastf1_service import get_sessions
 
 router = APIRouter(prefix="/api", tags=["sessions"])
+
+FIRST_FASTF1_YEAR = 2018  # earliest year FastF1 has complete data for
+
+
+@router.get("/years")
+async def api_get_years():
+    """Return all years for which FastF1 data is available (2018 → current year)."""
+    current_year = datetime.now().year
+    years = list(range(FIRST_FASTF1_YEAR, current_year + 1))
+    return {"success": True, "data": years}
 
 
 @router.get("/sessions")

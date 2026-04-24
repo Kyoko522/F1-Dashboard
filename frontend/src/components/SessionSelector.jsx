@@ -1,12 +1,10 @@
-// SessionSelector — year picker and race session buttons at the top of the dashboard.
+// SessionSelector — year picker and race session buttons. Years are fetched from the API.
 
-const YEARS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
-
-export default function SessionSelector({ selectedYear, onYearChange, sessions, selectedSession, onSessionChange, mobile }) {
+export default function SessionSelector({ years, selectedYear, onYearChange, sessions, selectedSession, onSessionChange, mobile }) {
     return (
         <>
             <div style={{ display: "flex", gap: "8px", justifyContent: "center", marginBottom: "12px", flexWrap: "wrap" }}>
-                {YEARS.map(year => (
+                {years.map(year => (
                     <button
                         key={year}
                         onClick={() => onYearChange(year)}

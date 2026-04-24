@@ -2,6 +2,11 @@
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
 
+export const fetchYears = async () => {
+    const res = await fetch(`${API}/api/years`)
+    return res.json()
+}
+
 export const fetchSessions = async (year) => {
     const res = await fetch(`${API}/api/sessions?year=${year}`)
     return res.json()

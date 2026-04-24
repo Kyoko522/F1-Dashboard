@@ -40,7 +40,7 @@ export default function Dashboard() {
     }, [])
 
     const {
-        sessions, drivers, positions, trackData,
+        years, sessions, drivers, positions, trackData,
         driverLocations, setDriverLocations,
         telemetry, loadingSession, loadingDrivers, loadingTelemetry,
         fetchingRef,
@@ -169,6 +169,7 @@ export default function Dashboard() {
             </h1>
 
             <SessionSelector
+                years={years}
                 selectedYear={selectedYear}
                 onYearChange={handleYearChange}
                 sessions={sessions}

@@ -1,9 +1,10 @@
-// useSessionData — fetches sessions, session init, driver locations, and telemetry data.
+// useSessionData — fetches available years, sessions, session init, driver locations, and telemetry.
 
 import { useState, useEffect, useRef } from "react"
-import { fetchSessions, fetchSessionInit, fetchTelemetry, fetchLocation } from "../services/api"
+import { fetchYears, fetchSessions, fetchSessionInit, fetchTelemetry, fetchLocation } from "../services/api"
 
 export default function useSessionData(selectedYear, selectedSession, selectedDrivers, selectedDriver) {
+    const [years, setYears] = useState([])
     const [sessions, setSessions] = useState([])
     const [drivers, setDrivers] = useState([])
     const [positions, setPositions] = useState([])
@@ -15,9 +16,23 @@ export default function useSessionData(selectedYear, selectedSession, selectedDr
     const [loadingTelemetry, setLoadingTelemetry] = useState(false)
     const fetchingRef = useRef(new Set())
 
+    // Fetch available years once on mount — auto-updates each new season
+    useEffect(() => {
+        fetchYears()
+            .then(data => setYears(data.data ?? []))
+            .catch(() => {
+                // Fallback: generate years client-side if backend is unreachable
+                const currentYear = new Date().getFullYear()
+                const fallback = []
+                for (let y = 2018; y <= currentYear; y++) fallback.push(y)
+                setYears(fallback)
+            })
+    }, [])
+
     useEffect(() => {
         fetchSessions(selectedYear)
             .then(data => setSessions(data.data ?? []))
+            .catch(() => setSessions([]))
     }, [selectedYear])
 
     useEffect(() => {
@@ -45,6 +60,7 @@ export default function useSessionData(selectedYear, selectedSession, selectedDr
                 setTelemetry(data.data ?? [])
                 setLoadingTelemetry(false)
             })
+            .catch(() => setLoadingTelemetry(false))
     }, [selectedDriver])
 
     useEffect(() => {
@@ -59,12 +75,17 @@ export default function useSessionData(selectedYear, selectedSession, selectedDr
             setLoadingDrivers(true)
             const results = await Promise.all(
                 missing.map(async (driver) => {
-                    const data = await fetchLocation(selectedSession.session_key, driver.driver_number)
-                    const points = (data.data || [])
-                        .filter(p => p.x !== 0 && p.y !== 0)
-                        .map(p => ({ ...p, t: new Date(p.date).getTime() }))
-                    fetchingRef.current.delete(driver.driver_number)
-                    return { driver_number: driver.driver_number, points }
+                    try {
+                        const data = await fetchLocation(selectedSession.session_key, driver.driver_number)
+                        const points = (data.data || [])
+                            .filter(p => p.x !== 0 && p.y !== 0)
+                            .map(p => ({ ...p, t: new Date(p.date).getTime() }))
+                        fetchingRef.current.delete(driver.driver_number)
+                        return { driver_number: driver.driver_number, points }
+                    } catch {
+                        fetchingRef.current.delete(driver.driver_number)
+                        return { driver_number: driver.driver_number, points: [] }
+                    }
                 })
             )
             setDriverLocations(prev => {
@@ -78,7 +99,7 @@ export default function useSessionData(selectedYear, selectedSession, selectedDr
     }, [selectedDrivers])
 
     return {
-        sessions, drivers, positions, trackData,
+        years, sessions, drivers, positions, trackData,
         driverLocations, setDriverLocations,
         telemetry, loadingSession, loadingDrivers, loadingTelemetry,
         fetchingRef,
