@@ -67,3 +67,6 @@ htmlcov/
 
 # FastAPI / Uvicorn
 *.pid
+
+# Claude
+Claude.md
