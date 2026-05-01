@@ -288,7 +288,7 @@ export default function Dashboard() {
     )
 
     return (
-        <div style={{ background: "#0a0a1a", minHeight: "100vh", color: "white", fontFamily: "monospace" }}>
+        <div style={{ background: "#0a0a1a", minHeight: "100vh", color: "white", fontFamily: "monospace", overflowX: "hidden", maxWidth: "100vw" }}>
             {/* App title */}
             <div style={{ background: "#0d0d22", borderBottom: "1px solid #222", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <h1 style={{ color: "#e10600", margin: 0, fontSize: "18px", letterSpacing: "3px" }}>F1 DASHBOARD</h1>

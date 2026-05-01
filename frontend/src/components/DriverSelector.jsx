@@ -67,8 +67,12 @@ export default function DriverSelector({ drivers, selectedDrivers, onToggleDrive
                                 fontSize: mobile ? "14px" : "12px",
                                 textAlign: "left",
                                 flex: 1,
+                                minWidth: 0,
                                 minHeight: mobile ? "44px" : "auto",
                                 padding: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
                             }}
                         >
                             <span style={{ color: "#aaa", marginRight: "6px", fontSize: mobile ? "12px" : "11px" }}>

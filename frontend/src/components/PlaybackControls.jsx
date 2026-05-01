@@ -38,26 +38,52 @@ export default function PlaybackControls({ isPlaying, speed, playbackOffset, ses
 
     return (
         <div style={{ marginTop: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: mobile ? "8px" : "10px" }}>
-                <button onClick={onTogglePlay} style={playPauseStyle}>
-                    {isPlaying ? "⏸" : "▶"}
-                </button>
-                <div style={{ display: "flex", gap: mobile ? "6px" : "4px" }}>
-                    {SPEED_OPTIONS.map(s => (
-                        <button key={s} onClick={() => onSpeedChange(s)} style={speedButtonStyle(s)}>
-                            {s}x
+            {mobile ? (
+                <>
+                    {/* Mobile: play + speed on one row, slider below */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                        <button onClick={onTogglePlay} style={playPauseStyle}>
+                            {isPlaying ? "⏸" : "▶"}
                         </button>
-                    ))}
+                        <div style={{ display: "flex", gap: "6px", flex: 1 }}>
+                            {SPEED_OPTIONS.map(s => (
+                                <button key={s} onClick={() => onSpeedChange(s)} style={{ ...speedButtonStyle(s), flex: 1 }}>
+                                    {s}x
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <input
+                        type="range"
+                        min={0}
+                        max={maxOffset}
+                        value={playbackOffset}
+                        onChange={e => onSeek(Number(e.target.value))}
+                        style={{ width: "100%", accentColor: "#e10600", cursor: "pointer", height: "20px", display: "block" }}
+                    />
+                </>
+            ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <button onClick={onTogglePlay} style={playPauseStyle}>
+                        {isPlaying ? "⏸" : "▶"}
+                    </button>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                        {SPEED_OPTIONS.map(s => (
+                            <button key={s} onClick={() => onSpeedChange(s)} style={speedButtonStyle(s)}>
+                                {s}x
+                            </button>
+                        ))}
+                    </div>
+                    <input
+                        type="range"
+                        min={0}
+                        max={maxOffset}
+                        value={playbackOffset}
+                        onChange={e => onSeek(Number(e.target.value))}
+                        style={{ flex: 1, accentColor: "#e10600", cursor: "pointer" }}
+                    />
                 </div>
-                <input
-                    type="range"
-                    min={0}
-                    max={maxOffset}
-                    value={playbackOffset}
-                    onChange={e => onSeek(Number(e.target.value))}
-                    style={{ flex: 1, accentColor: "#e10600", cursor: "pointer", height: mobile ? "20px" : "auto" }}
-                />
-            </div>
+            )}
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#555", marginTop: "4px" }}>
                 <span>START</span>
                 <span>END</span>
