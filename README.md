@@ -1,9 +1,29 @@
 # F1 Dashboard
 
+[![CI](https://github.com/Kyoko522/f1-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/Kyoko522/f1-dashboard/actions/workflows/ci.yml)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+[![React 19](https://img.shields.io/badge/react-19-61dafb.svg)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 A full-stack Formula 1 telemetry replay dashboard. Watch any race from 2018 onward with live driver positions on the track, real-time telemetry, a live leaderboard, and an AI-powered racing line analyzer — all synced to a scrubbable playback timeline.
 
-**Live demo:** [f1-dashboard-production.up.railway.app](https://f1-dashboard-production.up.railway.app)  
+**Live demo:** [f1-dashboard-production.up.railway.app](https://f1-dashboard-production.up.railway.app)
 **Data source:** [FastF1](https://github.com/theOehrly/Fast-F1) — official F1 timing and telemetry feeds
+**Architecture deep-dive:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — math, system design, and the why behind every decision
+
+---
+
+## Why I Built This
+
+I've been a motorsport fan for as long as I can remember, and I've always wanted to understand a race the way an engineer on the pit wall does — not as a TV spectator. When I found FastF1 (the open-source library that exposes the same telemetry F1 teams use), I knew I wanted to build something on top of it.
+
+The goal was twofold:
+
+1. **Build something I'd genuinely use.** Every feature exists because I wanted it as a fan — a smooth replay, a live leaderboard that updates as the cars move, an analyzer that asks "what would my own car look like on this circuit?"
+2. **Push my engineering across the full stack.** Not just gluing libraries together — actually engineering the hard parts: a 60fps canvas renderer, a thread-safe LRU cache with load deduplication, race-start detection from raw GPS, a physics-inspired speed scaling model for the racing line.
+
+This isn't a tutorial project. Every piece of architecture is there for a reason that's documented either in code comments or in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
@@ -46,6 +66,50 @@ You pick a year and a race. The backend downloads that session's data from the o
 - Touch-friendly 44px minimum tap targets
 - Playback controls stack into two rows on small screens
 - Collapsible session selector to maximize track area
+
+---
+
+## Technical Highlights
+
+A few pieces I'm proud of — full write-ups with code and math are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+### 60fps Canvas Renderer With Zero React Re-renders
+A single `requestAnimationFrame` loop reads live state through refs. The static track outline is pre-rendered to an offscreen canvas and blitted each frame — only the 20 car positions are drawn live. Sub-pixel linear interpolation between GPS samples keeps the cars smooth at any playback speed.
+
+### Thread-safe LRU Cache with Load Deduplication
+The backend uses a `threading.Event` per session key. If three users hit the same uncached session simultaneously, exactly one thread downloads; the other two wait on the event and read from cache. Prevents the thundering-herd problem on a 30-second cold load.
+
+### Physics-Inspired Racing Line Scaling
+The AI Race Line analyzer takes the fastest lap and scales its speed targets to your own car's specs using a closed-form multiplier:
+
+$$\text{speed\_mult} = \left(\frac{P}{1000}\right)^{0.25} \cdot \left(\frac{800}{W}\right)^{0.15} \cdot D_{\text{downforce}} \cdot T_{\text{tire}}$$
+
+The exponents approximate real drag-dominated relationships (drag $\propto v^2$, so top speed scales with the fourth root of power). The full derivation is in the architecture doc.
+
+### Automatic Race-Start Detection
+Replays would otherwise begin during the formation grid — minutes of stationary cars. A sliding-window algorithm in `usePlayback.js` scans the first 30% of GPS data, finds the last 5-second window where average car movement drops below 15 metres, and auto-seeks 8 seconds before that point. Runs client-side with no backend round-trip.
+
+### Wall-clock Playback Engine
+Playback uses real elapsed time, not frame counting. Drop a frame → next tick recomputes the offset from `Date.now()` and self-corrects. The animation stays accurate under tab throttling, GC pauses, and mid-playback speed changes.
+
+---
+
+## Skills Demonstrated
+
+This project exercises the kind of engineering I want to do professionally — from system design through implementation to deployment.
+
+| Area | What this project shows |
+|---|---|
+| **Full-stack engineering** | FastAPI + React + Docker + cloud deployment, all built and operated end-to-end |
+| **System design** | Layered backend, two-tier cache, load deduplication, single-source-of-truth state model |
+| **Performance** | 60fps canvas with 20 animated agents, server-side downsampling, offscreen rendering, $O(\log n)$ binary-search interpolation |
+| **Concurrency** | Thread-safe cache, async route + sync service via `asyncio.to_thread`, event-based load deduplication |
+| **Math & algorithms** | Race-start detection (sliding window), linear interpolation, apex detection (local minima), physics-inspired speed scaling |
+| **API design** | REST API with auto-generated OpenAPI docs, combined endpoints to cut round-trips, downsampling for bandwidth |
+| **Frontend craft** | Custom Canvas 2D rendering (no charting library), zero state management library, sub-70KB gzipped bundle |
+| **DevOps / CI/CD** | GitHub Actions pipeline (lint + test + build + Docker), pre-commit hooks, automated deploys to Railway + Vercel |
+| **Code quality** | Ruff + Prettier + ESLint enforced in CI, pytest suite, PR template, contributing guide |
+| **Documentation** | Architecture deep-dive, contributing guide, inline rationale for every non-obvious decision |
 
 ---
 
@@ -371,3 +435,91 @@ docker-compose up --build
 ### Performance Note
 
 The first request to any session takes 10–30 seconds — FastF1 fetches and parses data from F1's timing servers. All subsequent requests for that session are instant (served from the in-memory LRU cache). On Railway the disk cache persists across deploys via a volume mount, so restarts don't require re-downloading.
+
+---
+
+## CI / CD
+
+Every push and pull request runs the [`CI` workflow](.github/workflows/ci.yml) on GitHub Actions. Three jobs run in parallel:
+
+| Job | What it does |
+|---|---|
+| `backend` | Ruff lint + format check, then `pytest` (skips integration tests that hit FastF1) |
+| `frontend` | ESLint, Prettier check, then `vite build` |
+| `docker` | Builds the production Docker image to verify the Dockerfile still works |
+
+Deployment is **continuous** — once CI passes on `main`, Railway and Vercel each auto-deploy from the same commit. There is no separate deploy workflow; the platforms watch the main branch directly.
+
+### Running the checks locally
+
+```bash
+# Backend
+cd backend
+pip install -r requirements-dev.txt
+ruff check . && ruff format --check . && pytest
+
+# Frontend
+cd frontend
+npm ci
+npm run lint && npm run format:check && npm run build
+```
+
+### Pre-commit hooks
+
+Optional but recommended — runs the same checks before each commit so CI never has to catch a formatting issue.
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Skip a single commit with `git commit --no-verify`. Run against the whole repo with `pre-commit run --all-files`.
+
+### Pull request template
+
+A [PR template](.github/PULL_REQUEST_TEMPLATE.md) is auto-loaded into every PR description, with a checklist that mirrors the CI jobs so reviewers know what's been verified.
+
+---
+
+## What's Next
+
+Things I'd build next if I kept investing time:
+
+- **Sector timing overlay** — colored sectors on the track showing where each driver is gaining or losing time relative to the leader's best lap. Requires resampling each sector to a common time base and computing per-sector deltas.
+- **Head-to-head comparison mode** — pick two drivers, see their delta time visualized as a moving graph while the replay plays. Conceptually a second `usePlayback`-driven derivation, mathematically a running integral of speed differential.
+- **Per-corner racing line overlay** — overlay every driver's actual line through a selected corner on the ideal line, so you can see where each driver took different cornering paths. Pure client-side once corner detection runs offline.
+- **Frontend test suite** — add Vitest + React Testing Library for the hooks and the API service. The canvas-heavy components are harder to test cleanly but the data flow can be locked down.
+- **Server-Sent Events for live races** — during a live grand prix weekend, push leaderboard deltas instead of requiring page reload. The cache architecture is already in place for this; just needs an SSE endpoint and a frontend hook.
+
+---
+
+## What I Learned Building This
+
+A short, honest list:
+
+- **Canvas + React is a delicate dance.** My first pass re-rendered React on every frame and dropped to 15fps. The refs-and-rAF pattern in `TrackCanvas` is the third rewrite; the first two taught me why.
+- **Caches are easy. Cache *correctness* under concurrency is not.** The first version of the session cache had a textbook thundering-herd bug — three identical downloads firing in parallel. The `threading.Event` pattern is the fix and it's now my default for any expensive lazy load.
+- **Wall-clock playback beats frame-counting playback every time.** I started with a frame counter and watched the animation drift seconds out of sync after a few minutes of tab-switching. Recomputing from `Date.now()` every tick was the simple fix I should have done from day one.
+- **Server-side downsampling is free bandwidth.** Cutting telemetry samples by 5× at the API layer dropped initial load time noticeably without any visual difference. Trim where you serialize, not where you render.
+- **Hand-rolled Canvas is sometimes the right call.** I evaluated D3 and Recharts before writing the renderer. They're great for what they do — but they're optimized for charts, not 20-agent realtime animation. Sometimes a charting library is more friction than it saves.
+- **The boring infrastructure matters.** Setting up CI, pre-commit hooks, and a PR template took an afternoon and pays off forever. Skipping that work in earlier projects always cost me more than it saved.
+
+---
+
+## Project Documentation
+
+| Doc | What's in it |
+|---|---|
+| [README.md](README.md) | This file — overview, features, setup, API reference |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Deep-dive: math, system design, concurrency, performance |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Dev setup, code style, PR workflow |
+| [backend/README.md](backend/README.md) | Backend-specific: endpoints, schemas, caching |
+| [frontend/README.md](frontend/README.md) | Frontend-specific: components, hooks, design decisions |
+| [LICENSE](LICENSE) | MIT |
+
+---
+
+## Author
+
+**Sheel Patel** — Computer Science graduate, Toronto Metropolitan University.
+[Portfolio](https://sheelportfolio.vercel.app/) · [GitHub](https://github.com/Kyoko522)
