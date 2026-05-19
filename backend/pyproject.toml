@@ -1,0 +1,50 @@
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    "fastf1_cache",
+    # app/main.py is the pre-refactor monolithic version, no longer imported.
+    # Excluded from lint until the user decides to delete it. The real entry is backend/main.py.
+    "app/main.py",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",  # line too long — handled by formatter
+    "B008",  # do not perform function calls in argument defaults (FastAPI uses this pattern)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011", "SIM117"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "integration: tests that hit external services (FastF1, OpenF1) — slow, network-dependent",
+    "unit: fast tests with no external dependencies",
+]
