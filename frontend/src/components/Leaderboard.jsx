@@ -28,19 +28,45 @@ export default function Leaderboard({ positions, currentTime, drivers, mobile, c
 
     return (
         <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-                <h3 style={{ color: "#e10600", margin: 0, fontSize: mobile ? "14px" : "16px" }}>LEADERBOARD</h3>
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "10px",
+                }}
+            >
+                <h3 style={{ color: "#e10600", margin: 0, fontSize: mobile ? "14px" : "16px" }}>
+                    LEADERBOARD
+                </h3>
                 {currentLap != null && totalLaps != null && currentLap > 0 && (
-                    <span style={{ color: "#ffffff", fontSize: mobile ? "13px" : "14px", fontWeight: "700",  padding: "2px 8px", borderRadius: "4px", letterSpacing: "1px" }}>
-                        {currentLap}<span style={{ color: "#555" }}>/{totalLaps}</span>
+                    <span
+                        style={{
+                            color: "#ffffff",
+                            fontSize: mobile ? "13px" : "14px",
+                            fontWeight: "700",
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            letterSpacing: "1px",
+                        }}
+                    >
+                        {currentLap}
+                        <span style={{ color: "#555" }}>/{totalLaps}</span>
                     </span>
                 )}
             </div>
             {entries.slice(0, 20).map((entry, i) => {
-                const driver = drivers.find(d => d.driver_number === entry.driver_number)
+                const driver = drivers.find((d) => d.driver_number === entry.driver_number)
                 const color = TEAM_COLORS[entry.driver_number] || "#ffffff"
                 // Top 3 get gold / silver / bronze position labels
-                const posColor = entry.position === 1 ? "#FFD700" : entry.position === 2 ? "#C0C0C0" : entry.position === 3 ? "#CD7F32" : "#555"
+                const posColor =
+                    entry.position === 1
+                        ? "#FFD700"
+                        : entry.position === 2
+                          ? "#C0C0C0"
+                          : entry.position === 3
+                            ? "#CD7F32"
+                            : "#555"
                 return (
                     <div
                         key={i}

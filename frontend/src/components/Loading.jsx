@@ -4,14 +4,16 @@ import f1car from "../assets/f1car.png"
 
 export default function Loading({ message = "Loading..." }) {
     return (
-        <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "200px",
-            gap: "20px",
-        }}>
+        <div
+            style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "200px",
+                gap: "20px",
+            }}
+        >
             <div style={{ position: "relative", width: "120px", height: "120px" }}>
                 <img
                     src={f1car}

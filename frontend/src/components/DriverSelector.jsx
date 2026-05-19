@@ -2,13 +2,27 @@
 
 import TEAM_COLORS from "../utils/teamColors"
 
-export default function DriverSelector({ drivers, selectedDrivers, onToggleDriver, onSelectAll, onSelectTelemetry, mobile }) {
+export default function DriverSelector({
+    drivers,
+    selectedDrivers,
+    onToggleDriver,
+    onSelectAll,
+    onSelectTelemetry,
+    mobile,
+}) {
     const allSelected = selectedDrivers.length === drivers.length
 
     return (
         <div style={{ background: "#16213e", padding: "12px", borderRadius: "8px" }}>
             {/* Header row */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "8px",
+                }}
+            >
                 <h3 style={{ color: "#e10600", margin: 0, fontSize: mobile ? "14px" : "16px" }}>DRIVERS</h3>
                 {/* ALL/CLEAR — 44px touch target on mobile */}
                 <button
@@ -36,8 +50,8 @@ export default function DriverSelector({ drivers, selectedDrivers, onToggleDrive
                 </p>
             )}
 
-            {drivers.map(driver => {
-                const isSelected = !!selectedDrivers.find(d => d.driver_number === driver.driver_number)
+            {drivers.map((driver) => {
+                const isSelected = !!selectedDrivers.find((d) => d.driver_number === driver.driver_number)
                 const color = TEAM_COLORS[driver.driver_number] || "#ffffff"
                 return (
                     <div
@@ -75,7 +89,13 @@ export default function DriverSelector({ drivers, selectedDrivers, onToggleDrive
                                 whiteSpace: "nowrap",
                             }}
                         >
-                            <span style={{ color: "#aaa", marginRight: "6px", fontSize: mobile ? "12px" : "11px" }}>
+                            <span
+                                style={{
+                                    color: "#aaa",
+                                    marginRight: "6px",
+                                    fontSize: mobile ? "12px" : "11px",
+                                }}
+                            >
                                 #{driver.driver_number}
                             </span>
                             {driver.full_name}

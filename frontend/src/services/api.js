@@ -27,7 +27,10 @@ export const fetchLocation = async (sessionKey, driverNumber) => {
     return res.json()
 }
 
-export const fetchRacingLine = async (sessionKey, { power_hp = 1000, weight_kg = 800, downforce = "medium", tire = "medium" } = {}) => {
+export const fetchRacingLine = async (
+    sessionKey,
+    { power_hp = 1000, weight_kg = 800, downforce = "medium", tire = "medium" } = {}
+) => {
     const params = new URLSearchParams({ power_hp, weight_kg, downforce, tire })
     const res = await fetch(`${API}/api/racing_line/${sessionKey}?${params}`)
     return res.json()

@@ -7,10 +7,12 @@ import TEAM_COLORS from "../utils/teamColors"
 // Points must have a precomputed `.t` (ms timestamp) field.
 function interpolatePosition(points, currentTime) {
     if (!currentTime || !points.length) return null
-    let lo = 0, hi = points.length - 1
+    let lo = 0,
+        hi = points.length - 1
     while (lo < hi) {
         const mid = Math.floor((lo + hi + 1) / 2)
-        if (points[mid].t <= currentTime) lo = mid; else hi = mid - 1
+        if (points[mid].t <= currentTime) lo = mid
+        else hi = mid - 1
     }
     const p0 = points[lo]
     if (lo >= points.length - 1) return { x: p0.x, y: p0.y }
@@ -31,14 +33,21 @@ export default function TrackCanvas({ trackData, driverLocations, selectedDriver
     const driverLocationsRef = useRef(driverLocations)
     const trackCacheRef = useRef(null) // pre-rendered static track + coordinate transform
 
-    useEffect(() => { currentTimeRef.current = currentTime }, [currentTime])
-    useEffect(() => { selectedDriversRef.current = selectedDrivers }, [selectedDrivers])
-    useEffect(() => { driverLocationsRef.current = driverLocations }, [driverLocations])
+    useEffect(() => {
+        currentTimeRef.current = currentTime
+    }, [currentTime])
+    useEffect(() => {
+        selectedDriversRef.current = selectedDrivers
+    }, [selectedDrivers])
+    useEffect(() => {
+        driverLocationsRef.current = driverLocations
+    }, [driverLocations])
 
     useEffect(() => {
-        const observer = new ResizeObserver(entries => {
+        const observer = new ResizeObserver((entries) => {
             const width = Math.round(entries[0].contentRect.width)
-            if (width > 0) setSize(prev => prev.w === width ? prev : { w: width, h: Math.round(width * 0.55) })
+            if (width > 0)
+                setSize((prev) => (prev.w === width ? prev : { w: width, h: Math.round(width * 0.55) }))
         })
         if (containerRef.current) observer.observe(containerRef.current)
         return () => observer.disconnect()
@@ -47,9 +56,15 @@ export default function TrackCanvas({ trackData, driverLocations, selectedDriver
     // Pre-render the static track outline to an offscreen canvas.
     // Rebuilt only when trackData or canvas size changes, not on every frame.
     useEffect(() => {
-        if (!trackData.length) { trackCacheRef.current = null; return }
+        if (!trackData.length) {
+            trackCacheRef.current = null
+            return
+        }
         const { w: W, h: H } = size
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+        let minX = Infinity,
+            maxX = -Infinity,
+            minY = Infinity,
+            maxY = -Infinity
         for (const p of trackData) {
             if (p.x < minX) minX = p.x
             if (p.x > maxX) maxX = p.x
@@ -124,7 +139,13 @@ export default function TrackCanvas({ trackData, driverLocations, selectedDriver
                 ref={canvasRef}
                 width={size.w}
                 height={size.h}
-                style={{ width: "100%", height: "auto", background: "#0a0a1a", borderRadius: "8px", display: "block" }}
+                style={{
+                    width: "100%",
+                    height: "auto",
+                    background: "#0a0a1a",
+                    borderRadius: "8px",
+                    display: "block",
+                }}
             />
         </div>
     )

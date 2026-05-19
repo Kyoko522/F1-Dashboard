@@ -2,7 +2,16 @@
 
 const SPEED_OPTIONS = [1, 2, 5, 10]
 
-export default function PlaybackControls({ isPlaying, speed, playbackOffset, sessionBounds, onTogglePlay, onSpeedChange, onSeek, mobile }) {
+export default function PlaybackControls({
+    isPlaying,
+    speed,
+    playbackOffset,
+    sessionBounds,
+    onTogglePlay,
+    onSpeedChange,
+    onSeek,
+    mobile,
+}) {
     const maxOffset = sessionBounds ? sessionBounds.end - sessionBounds.start : 0
 
     const speedButtonStyle = (s) => ({
@@ -46,8 +55,12 @@ export default function PlaybackControls({ isPlaying, speed, playbackOffset, ses
                             {isPlaying ? "⏸" : "▶"}
                         </button>
                         <div style={{ display: "flex", gap: "6px", flex: 1 }}>
-                            {SPEED_OPTIONS.map(s => (
-                                <button key={s} onClick={() => onSpeedChange(s)} style={{ ...speedButtonStyle(s), flex: 1 }}>
+                            {SPEED_OPTIONS.map((s) => (
+                                <button
+                                    key={s}
+                                    onClick={() => onSpeedChange(s)}
+                                    style={{ ...speedButtonStyle(s), flex: 1 }}
+                                >
                                     {s}x
                                 </button>
                             ))}
@@ -58,8 +71,14 @@ export default function PlaybackControls({ isPlaying, speed, playbackOffset, ses
                         min={0}
                         max={maxOffset}
                         value={playbackOffset}
-                        onChange={e => onSeek(Number(e.target.value))}
-                        style={{ width: "100%", accentColor: "#e10600", cursor: "pointer", height: "20px", display: "block" }}
+                        onChange={(e) => onSeek(Number(e.target.value))}
+                        style={{
+                            width: "100%",
+                            accentColor: "#e10600",
+                            cursor: "pointer",
+                            height: "20px",
+                            display: "block",
+                        }}
                     />
                 </>
             ) : (
@@ -68,7 +87,7 @@ export default function PlaybackControls({ isPlaying, speed, playbackOffset, ses
                         {isPlaying ? "⏸" : "▶"}
                     </button>
                     <div style={{ display: "flex", gap: "4px" }}>
-                        {SPEED_OPTIONS.map(s => (
+                        {SPEED_OPTIONS.map((s) => (
                             <button key={s} onClick={() => onSpeedChange(s)} style={speedButtonStyle(s)}>
                                 {s}x
                             </button>
@@ -79,12 +98,20 @@ export default function PlaybackControls({ isPlaying, speed, playbackOffset, ses
                         min={0}
                         max={maxOffset}
                         value={playbackOffset}
-                        onChange={e => onSeek(Number(e.target.value))}
+                        onChange={(e) => onSeek(Number(e.target.value))}
                         style={{ flex: 1, accentColor: "#e10600", cursor: "pointer" }}
                     />
                 </div>
             )}
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#555", marginTop: "4px" }}>
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "10px",
+                    color: "#555",
+                    marginTop: "4px",
+                }}
+            >
                 <span>START</span>
                 <span>END</span>
             </div>

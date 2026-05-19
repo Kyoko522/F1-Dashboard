@@ -1,6 +1,14 @@
 // SessionSelector — year picker and race session buttons. Years are fetched from the API.
 
-export default function SessionSelector({ years, selectedYear, onYearChange, sessions, selectedSession, onSessionChange, mobile }) {
+export default function SessionSelector({
+    years,
+    selectedYear,
+    onYearChange,
+    sessions,
+    selectedSession,
+    onSessionChange,
+    mobile,
+}) {
     const yearBtnStyle = (year) => ({
         background: selectedYear === year ? "#e10600" : "#1a1a2e",
         color: "white",
@@ -31,16 +39,36 @@ export default function SessionSelector({ years, selectedYear, onYearChange, ses
 
     return (
         <>
-            <div style={{ display: "flex", gap: mobile ? "6px" : "8px", justifyContent: "center", marginBottom: "10px", flexWrap: "wrap" }}>
-                {years.map(year => (
+            <div
+                style={{
+                    display: "flex",
+                    gap: mobile ? "6px" : "8px",
+                    justifyContent: "center",
+                    marginBottom: "10px",
+                    flexWrap: "wrap",
+                }}
+            >
+                {years.map((year) => (
                     <button key={year} onClick={() => onYearChange(year)} style={yearBtnStyle(year)}>
                         {year}
                     </button>
                 ))}
             </div>
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: mobile ? "12px" : "20px", justifyContent: "center" }}>
-                {sessions.map(session => (
-                    <button key={session.session_key} onClick={() => onSessionChange(session)} style={sessionBtnStyle(session)}>
+            <div
+                style={{
+                    display: "flex",
+                    gap: "6px",
+                    flexWrap: "wrap",
+                    marginBottom: mobile ? "12px" : "20px",
+                    justifyContent: "center",
+                }}
+            >
+                {sessions.map((session) => (
+                    <button
+                        key={session.session_key}
+                        onClick={() => onSessionChange(session)}
+                        style={sessionBtnStyle(session)}
+                    >
                         {session.country_name}
                     </button>
                 ))}
