@@ -1,9 +1,10 @@
 # Race data router — handles /api/positions, /api/laps, /api/stints, /api/pitstops.
 
 import asyncio
-from typing import Optional
+
 from fastapi import APIRouter, HTTPException
-from app.services.fastf1_service import get_positions, get_laps, get_stints, get_pit_stops
+
+from app.services.fastf1_service import get_laps, get_pit_stops, get_positions, get_stints
 
 router = APIRouter(prefix="/api", tags=["race_data"])
 
@@ -19,14 +20,14 @@ async def api_get_positions(session_key: str):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/laps/{session_key}")
 async def api_get_laps(
     session_key: str,
-    driver_number: Optional[int] = None,
-    lap_number: Optional[int] = None,
+    driver_number: int | None = None,
+    lap_number: int | None = None,
 ):
     """Return lap times with tyre compound and stint info, optionally filtered by driver or lap."""
     try:
@@ -37,11 +38,11 @@ async def api_get_laps(
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/stints/{session_key}")
-async def api_get_stints(session_key: str, driver_number: Optional[int] = None):
+async def api_get_stints(session_key: str, driver_number: int | None = None):
     """Return aggregated tyre stint data per driver, optionally filtered by driver."""
     try:
         result = await asyncio.to_thread(get_stints, session_key, driver_number)
@@ -51,11 +52,11 @@ async def api_get_stints(session_key: str, driver_number: Optional[int] = None):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/pitstops/{session_key}")
-async def api_get_pitstops(session_key: str, driver_number: Optional[int] = None):
+async def api_get_pitstops(session_key: str, driver_number: int | None = None):
     """Return pit stop events with lap number and duration, optionally filtered by driver."""
     try:
         result = await asyncio.to_thread(get_pit_stops, session_key, driver_number)
@@ -65,4 +66,4 @@ async def api_get_pitstops(session_key: str, driver_number: Optional[int] = None
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

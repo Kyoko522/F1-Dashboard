@@ -1,13 +1,13 @@
 # FastF1 service — all session loading, caching, and data extraction logic lives here.
 # NOTE: This file is 300+ lines. Consider splitting into session_cache.py and extractors.py.
 
-import fastf1
+import logging
 import os
 import threading
+from datetime import UTC, datetime
+
+import fastf1
 import pandas as pd
-import logging
-from datetime import datetime, timezone
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -77,11 +77,11 @@ def _load_session(session_key: str) -> fastf1.core.Session:
                 del _session_events[session_key]
 
 
-def get_sessions(year: int, session_type: str = "Race") -> Optional[list]:
+def get_sessions(year: int, session_type: str = "Race") -> list | None:
     try:
         schedule = fastf1.get_event_schedule(year)
         schedule = schedule[schedule["RoundNumber"] > 0]
-        now = pd.Timestamp(datetime.now(timezone.utc))
+        now = pd.Timestamp(datetime.now(UTC))
         results = []
         for _, event in schedule.iterrows():
             for col in ["Session1", "Session2", "Session3", "Session4", "Session5"]:
@@ -99,21 +99,23 @@ def get_sessions(year: int, session_type: str = "Race") -> Optional[list]:
                     if ts > now:
                         continue
                 type_code = TYPE_MAP[raw_type]
-                results.append({
-                    "session_key": f"{year}_{int(event['RoundNumber'])}_{type_code}",
-                    "country_name": event["Country"],
-                    "event_name": event["EventName"],
-                    "round_number": int(event["RoundNumber"]),
-                    "session_type": raw_type,
-                    "session_type_code": type_code,
-                })
+                results.append(
+                    {
+                        "session_key": f"{year}_{int(event['RoundNumber'])}_{type_code}",
+                        "country_name": event["Country"],
+                        "event_name": event["EventName"],
+                        "round_number": int(event["RoundNumber"]),
+                        "session_type": raw_type,
+                        "session_type_code": type_code,
+                    }
+                )
         return results
     except Exception as e:
         logger.error(f"Error fetching sessions for {year}: {e}")
         return None
 
 
-def get_drivers(session_key: str) -> Optional[list]:
+def get_drivers(session_key: str) -> list | None:
     try:
         session = _load_session(session_key)
         results = session.results
@@ -133,7 +135,7 @@ def get_drivers(session_key: str) -> Optional[list]:
         return None
 
 
-def get_location(session_key: str, driver_number: int) -> Optional[list]:
+def get_location(session_key: str, driver_number: int) -> list | None:
     """Return full-race position data for a driver, downsampled."""
     try:
         session = _load_session(session_key)
@@ -154,7 +156,7 @@ def get_location(session_key: str, driver_number: int) -> Optional[list]:
         return None
 
 
-def get_telemetry(session_key: str, driver_number: int) -> Optional[list]:
+def get_telemetry(session_key: str, driver_number: int) -> list | None:
     try:
         session = _load_session(session_key)
         car_data = session.car_data
@@ -165,21 +167,29 @@ def get_telemetry(session_key: str, driver_number: int) -> Optional[list]:
         df = car_data[key].iloc[::5][["Date", "Speed", "Throttle", "Brake", "nGear", "RPM", "DRS"]].copy()
         df["date"] = df["Date"].apply(lambda d: d.isoformat() if pd.notna(d) else None)
         df["brake"] = df["Brake"].fillna(False).astype(bool).astype(int) * 100
-        df = df.rename(columns={"Speed": "speed", "Throttle": "throttle", "nGear": "n_gear", "RPM": "rpm", "DRS": "drs"})
-        df[["speed", "throttle", "n_gear", "rpm", "drs"]] = df[["speed", "throttle", "n_gear", "rpm", "drs"]].fillna(0).astype(int)
+        df = df.rename(
+            columns={"Speed": "speed", "Throttle": "throttle", "nGear": "n_gear", "RPM": "rpm", "DRS": "drs"}
+        )
+        df[["speed", "throttle", "n_gear", "rpm", "drs"]] = (
+            df[["speed", "throttle", "n_gear", "rpm", "drs"]].fillna(0).astype(int)
+        )
         return df[["date", "speed", "throttle", "brake", "n_gear", "rpm", "drs"]].to_dict("records")
     except Exception as e:
         logger.error(f"Error fetching telemetry for {session_key} driver {driver_number}: {e}")
         return None
 
 
-def get_positions(session_key: str) -> Optional[list]:
+def get_positions(session_key: str) -> list | None:
     try:
         session = _load_session(session_key)
         laps = session.laps
         if laps is None or laps.empty:
             return []
-        df = laps[["DriverNumber", "Position", "LapStartDate", "LapNumber"]].dropna(subset=["Position", "LapStartDate"]).copy()
+        df = (
+            laps[["DriverNumber", "Position", "LapStartDate", "LapNumber"]]
+            .dropna(subset=["Position", "LapStartDate"])
+            .copy()
+        )
         df = df.sort_values("LapStartDate")
         df["driver_number"] = df["DriverNumber"].astype(int)
         df["position"] = df["Position"].astype(int)
@@ -220,7 +230,7 @@ def get_track_outline(session_key: str) -> list:
         return []
 
 
-def get_session_init(session_key: str) -> Optional[dict]:
+def get_session_init(session_key: str) -> dict | None:
     """Load session once and return drivers, positions, and track outline in one call."""
     try:
         drivers = get_drivers(session_key)
@@ -232,7 +242,9 @@ def get_session_init(session_key: str) -> Optional[dict]:
         return None
 
 
-def get_laps(session_key: str, driver_number: Optional[int] = None, lap_number: Optional[int] = None) -> Optional[list]:
+def get_laps(
+    session_key: str, driver_number: int | None = None, lap_number: int | None = None
+) -> list | None:
     try:
         session = _load_session(session_key)
         laps = session.laps
@@ -259,7 +271,7 @@ def get_laps(session_key: str, driver_number: Optional[int] = None, lap_number: 
         return None
 
 
-def get_stints(session_key: str, driver_number: Optional[int] = None) -> Optional[list]:
+def get_stints(session_key: str, driver_number: int | None = None) -> list | None:
     try:
         session = _load_session(session_key)
         laps = session.laps
@@ -268,11 +280,15 @@ def get_stints(session_key: str, driver_number: Optional[int] = None) -> Optiona
         if driver_number is not None:
             laps = laps[laps["DriverNumber"] == str(driver_number)]
         group_cols = [c for c in ["DriverNumber", "Stint", "Compound"] if c in laps.columns]
-        grouped = laps.groupby(group_cols).agg(
-            lap_count=("LapNumber", "count"),
-            first_lap=("LapNumber", "min"),
-            last_lap=("LapNumber", "max"),
-        ).reset_index()
+        grouped = (
+            laps.groupby(group_cols)
+            .agg(
+                lap_count=("LapNumber", "count"),
+                first_lap=("LapNumber", "min"),
+                last_lap=("LapNumber", "max"),
+            )
+            .reset_index()
+        )
         return [
             {
                 "driver_number": int(row["DriverNumber"]),
@@ -289,7 +305,7 @@ def get_stints(session_key: str, driver_number: Optional[int] = None) -> Optiona
         return None
 
 
-def get_pit_stops(session_key: str, driver_number: Optional[int] = None) -> Optional[list]:
+def get_pit_stops(session_key: str, driver_number: int | None = None) -> list | None:
     try:
         session = _load_session(session_key)
         laps = session.laps
@@ -305,7 +321,8 @@ def get_pit_stops(session_key: str, driver_number: Optional[int] = None) -> Opti
                 "driver_number": int(row["DriverNumber"]),
                 "lap_number": int(row["LapNumber"]),
                 "duration": (row["PitOutTime"] - row["PitInTime"]).total_seconds()
-                    if pd.notna(row.get("PitInTime")) and pd.notna(row.get("PitOutTime")) else None,
+                if pd.notna(row.get("PitInTime")) and pd.notna(row.get("PitOutTime"))
+                else None,
                 "compound": row.get("Compound", None),
             }
             for _, row in pit_laps.iterrows()

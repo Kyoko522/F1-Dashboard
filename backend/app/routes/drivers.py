@@ -1,7 +1,9 @@
 # Drivers router — handles /api/session_init and /api/drivers endpoints only.
 
 import asyncio
+
 from fastapi import APIRouter, HTTPException
+
 from app.services.fastf1_service import get_drivers, get_session_init
 
 router = APIRouter(prefix="/api", tags=["drivers"])
@@ -18,7 +20,7 @@ async def api_session_init(session_key: str):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/drivers/{session_key}")
@@ -32,4 +34,4 @@ async def api_get_drivers(session_key: str):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

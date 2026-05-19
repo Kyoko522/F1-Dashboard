@@ -3,7 +3,8 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import sessions, drivers, telemetry, race_data, racing_line
+
+from app.routes import drivers, race_data, racing_line, sessions, telemetry
 
 app = FastAPI(
     title="F1 Racing Dashboard API",

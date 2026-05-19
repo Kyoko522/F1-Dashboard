@@ -1,14 +1,15 @@
 # racing_line_service.py — extract ideal racing line from the fastest F1 lap and adjust for car specs.
 
-import pandas as pd
 import logging
-from typing import Optional
+
+import pandas as pd
+
 from app.services.fastf1_service import _load_session
 
 logger = logging.getLogger(__name__)
 
 DOWNFORCE_FACTORS = {"low": 0.90, "medium": 1.0, "high": 1.08}
-TIRE_FACTORS      = {"soft": 1.05, "medium": 1.0, "hard": 0.94}
+TIRE_FACTORS = {"soft": 1.05, "medium": 1.0, "hard": 0.94}
 
 
 def _speed_color_ratio(speed: float, max_speed: float) -> float:
@@ -24,7 +25,7 @@ def get_racing_line(
     weight_kg: int = 800,
     downforce: str = "medium",
     tire: str = "medium",
-) -> Optional[dict]:
+) -> dict | None:
     """
     Return the ideal racing line for a session derived from the fastest lap,
     with speed values scaled to the provided car specifications.
@@ -45,10 +46,10 @@ def get_racing_line(
         tel = tel.iloc[::4].reset_index(drop=True)
 
         # Speed multiplier from car specs relative to F1 baseline (1000 hp / 800 kg)
-        power_factor    = (power_hp / 1000) ** 0.25
-        weight_factor   = (800 / max(weight_kg, 1)) ** 0.15
+        power_factor = (power_hp / 1000) ** 0.25
+        weight_factor = (800 / max(weight_kg, 1)) ** 0.15
         downforce_factor = DOWNFORCE_FACTORS.get(downforce, 1.0)
-        tire_factor      = TIRE_FACTORS.get(tire, 1.0)
+        tire_factor = TIRE_FACTORS.get(tire, 1.0)
         speed_mult = power_factor * weight_factor * downforce_factor * tire_factor
 
         points = []
@@ -62,7 +63,7 @@ def get_racing_line(
                 continue
 
             raw_speed = float(row.get("Speed", 0) or 0)
-            throttle  = float(row.get("Throttle", 0) or 0)
+            throttle = float(row.get("Throttle", 0) or 0)
 
             brake_raw = row.get("Brake", False)
             if isinstance(brake_raw, bool):
@@ -72,13 +73,15 @@ def get_racing_line(
             else:
                 is_brake = bool(brake_raw)
 
-            points.append({
-                "x": x,
-                "y": y,
-                "speed": round(raw_speed * speed_mult, 1),
-                "throttle": round(throttle, 1),
-                "brake": is_brake,
-            })
+            points.append(
+                {
+                    "x": x,
+                    "y": y,
+                    "speed": round(raw_speed * speed_mult, 1),
+                    "throttle": round(throttle, 1),
+                    "brake": is_brake,
+                }
+            )
 
         if not points:
             return None
@@ -95,16 +98,20 @@ def get_racing_line(
         apex_points = []
         speeds = [p["speed"] for p in points]
         for i in range(3, len(points) - 3):
-            if (not points[i]["brake"]
-                    and speeds[i] < speeds[i - 1]
-                    and speeds[i] < speeds[i + 1]
-                    and speeds[i] < speeds[i - 2]
-                    and speeds[i] < speeds[i + 2]):
-                apex_points.append({
-                    "x": points[i]["x"],
-                    "y": points[i]["y"],
-                    "speed": speeds[i],
-                })
+            if (
+                not points[i]["brake"]
+                and speeds[i] < speeds[i - 1]
+                and speeds[i] < speeds[i + 1]
+                and speeds[i] < speeds[i - 2]
+                and speeds[i] < speeds[i + 2]
+            ):
+                apex_points.append(
+                    {
+                        "x": points[i]["x"],
+                        "y": points[i]["y"],
+                        "speed": speeds[i],
+                    }
+                )
 
         return {
             "line": points,

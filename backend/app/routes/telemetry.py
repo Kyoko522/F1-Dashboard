@@ -1,7 +1,9 @@
 # Telemetry router — handles /api/location and /api/telemetry endpoints only.
 
 import asyncio
+
 from fastapi import APIRouter, HTTPException
+
 from app.services.fastf1_service import get_location, get_telemetry
 
 router = APIRouter(prefix="/api", tags=["telemetry"])
@@ -18,7 +20,7 @@ async def api_get_location(session_key: str, driver_number: int):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.get("/telemetry/{session_key}/{driver_number}")
@@ -32,4 +34,4 @@ async def api_get_telemetry(session_key: str, driver_number: int):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

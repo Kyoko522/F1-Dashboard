@@ -2,7 +2,9 @@
 
 import asyncio
 from datetime import datetime
+
 from fastapi import APIRouter, HTTPException
+
 from app.services.fastf1_service import get_sessions
 
 router = APIRouter(prefix="/api", tags=["sessions"])
@@ -27,4 +29,4 @@ async def api_get_sessions(year: int, session_type: str = "Race"):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
