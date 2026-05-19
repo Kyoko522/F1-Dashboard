@@ -168,6 +168,79 @@ components/  (pure display — receive props, render)
   TelemetryPanel.jsx → telemetry slice at currentTime
 ```
 
+### Request Lifecycle
+
+What happens chronologically when a user picks a race — including the cache-miss branch and the lock acquisition that prevents the thundering herd.
+
+```
+User picks "2024 Bahrain GP"
+   │
+   ▼
+Dashboard.handleSessionChange()                          [pages/Dashboard.jsx]
+   │  resets driver locations, playback offset, fetch refs
+   ▼
+useSessionData → fetchSessionInit("2024_1_R")            [hooks/useSessionData.js]
+   │
+   ▼  HTTP GET /api/session_init/2024_1_R
+FastAPI route handler                                    [routes/drivers.py]
+   │
+   ▼
+fastf1_service.get_session_init()                        [services/fastf1_service.py]
+   │
+   ├─ acquire _lock ────────────────────────────────┐
+   │                                                │
+   │   cache HIT?  ── yes ──► return cached session │
+   │       │                                        │
+   │       no                                       │
+   │       │                                        │
+   │   another thread loading?                      │
+   │       │                                        │
+   │       ├─ yes ─► register as waiter             │
+   │       │         release _lock                  │
+   │       │         event.wait()        ← blocks   │
+   │       │         re-acquire _lock               │
+   │       │         return cached session          │
+   │       │                                        │
+   │       └─ no  ─► create threading.Event         │
+   │                 release _lock                  │
+   │                                                │
+   │                 fastf1.get_session().load()    │   ← 10–30s (cold)
+   │                 acquire _lock                  │
+   │                 evict LRU if cache full        │
+   │                 store in _session_cache        │
+   │                 event.set()  ← wake waiters    │
+   │                 release _lock                  │
+   │                                                │
+   ├────────────────────────────────────────────────┘
+   │
+   ▼
+extract drivers + positions + track outline (one fastest lap)
+   │
+   ▼  JSON response
+useSessionData setState                                  [hooks/useSessionData.js]
+   │  drivers, positions, trackData populate React state
+   ▼
+TrackCanvas re-renders                                   [components/TrackCanvas.jsx]
+   │  pre-renders static track outline to offscreen canvas
+   │  starts requestAnimationFrame loop (reads via refs, never restarts)
+   ▼
+usePlayback computes sessionBounds                       [hooks/usePlayback.js]
+   │  scans first 30% of GPS data for grid stationary window
+   │  sets race start = last-still-window + 8s buffer
+   ▼
+Leaderboard + TelemetryPanel derive state from currentTime
+   │
+   ▼
+60fps canvas animation begins
+```
+
+Key properties this sequence guarantees:
+
+- **At most one downloader per session key** — the `_lock` + `threading.Event` pair makes concurrent requests for the same cold session share a single load.
+- **Lock is never held during slow I/O** — the actual `fastf1.load()` runs *outside* the lock so other sessions can be served in parallel.
+- **One round-trip, three datasets** — `/api/session_init` returns drivers, positions, and the track outline together. Saves two RTTs over fetching them separately.
+- **Render loop never restarts** — `TrackCanvas` reads `currentTime`, `selectedDrivers`, and `driverLocations` through refs, so React state changes update the next frame without tearing down the rAF loop.
+
 ### Session Loading & Caching
 
 Session data is expensive to fetch — 10–30 seconds on first load because FastF1 downloads and parses timing files from F1's official servers. The backend solves this with two layers:
