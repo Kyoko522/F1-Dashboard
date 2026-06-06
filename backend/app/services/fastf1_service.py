@@ -11,6 +11,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+# Store raw F1 data on disk so repeat request don't re-download from the API 
 CACHE_DIR = os.environ.get("FASTF1_CACHE_DIR", "/tmp/fastf1_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 fastf1.Cache.enable_cache(CACHE_DIR)
