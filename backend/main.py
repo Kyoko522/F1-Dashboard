@@ -1,11 +1,10 @@
 # Application entry point — FastAPI setup, middleware, and router registration only.
 # No business logic lives here; all logic is in app/services/ and app/routes/.
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.routes import drivers, race_data, racing_line, sessions, telemetry
 
+# Initialize FastAPI app with metadata and documentation settings, this is shown in the auto-generated docs
 app = FastAPI(
     title="F1 Racing Dashboard API",
     description="F1 data visualization dashboard",
@@ -14,24 +13,29 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+# Who is allowed to talked to the API (The Gatekeeper) 
+# Accepts cross-origin HTTP requests from any client domain
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],        # Accept request from ANY domain
+    allow_credentials=False,    # Don't allow cookies or auth headers to be sent cross-origin
+    allow_methods=["*"],        # Allow all HTTP methods (GET, POST, DELETE, etc.)
+    allow_headers=["*"],        # Allow all headers (Content-Type, Authorization, etc.)
 )
 
-app.include_router(sessions.router)
-app.include_router(drivers.router)
-app.include_router(telemetry.router)
-app.include_router(race_data.router)
-app.include_router(racing_line.router)
+# The Map Layout
+app.include_router(sessions.router)     # Routes for listing and initializing race sessions
+app.include_router(drivers.router)      # Routes for fetching driver info per session
+app.include_router(telemetry.router)    # Routes for car, telemetry data (speed, throttle, brake, etc.)
+app.include_router(race_data.router)    # Routes for laps, stints, positions, and pit stops
+app.include_router(racing_line.router)  # Routes for car GPS location/track position data
 
 
+# The Root Endpoint (The Welcome Desk)
 @app.get("/")
 async def root():
     """API health check and endpoint directory."""
+    # Returns a JSON object confirming the API is alive and listing all available routes
     return {
         "message": "F1 Racing Dashboard API",
         "status": "online",
