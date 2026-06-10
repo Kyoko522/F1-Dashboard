@@ -19,7 +19,7 @@ async def api_get_years():
 
 
 @router.get("/sessions")
-async def api_get_sessions(year: int, session_type: str = "Race"):
+async def api_get_sessions(year: int, session_type: str = "Race"):  # TODO: Add the abilty to add more session types
     """Return all sessions for a given year and session type."""
     try:
         result = await asyncio.to_thread(get_sessions, year, session_type)

@@ -23,12 +23,12 @@ app.add_middleware(
     allow_headers=["*"],        # Allow all headers (Content-Type, Authorization, etc.)
 )
 
-# The Map Layout
-app.include_router(sessions.router)     # Routes for listing and initializing race sessions
-app.include_router(drivers.router)      # Routes for fetching driver info per session
-app.include_router(telemetry.router)    # Routes for car, telemetry data (speed, throttle, brake, etc.)
-app.include_router(race_data.router)    # Routes for laps, stints, positions, and pit stops
-app.include_router(racing_line.router)  # Routes for car GPS location/track position data
+# The Map Layout, Basically makes the path for each API url route and FASTAPI will auto sort and direct each request to the appropriate handler
+app.include_router(sessions.router)     # Routes for listing and initializing race sessions                 /api/sessions
+app.include_router(drivers.router)      # Routes for fetching driver info per session                       /api/drivers/9165
+app.include_router(telemetry.router)    # Routes for car, telemetry data (speed, throttle, brake, etc.)     /api/telemetry/9165/44
+app.include_router(race_data.router)    # Routes for laps, stints, positions, and pit stops                 /api/laps/9165
+app.include_router(racing_line.router)  # Routes for car GPS location/track position data                   /api/location/9165/44
 
 
 # The Root Endpoint (The Welcome Desk)
