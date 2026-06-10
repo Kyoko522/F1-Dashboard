@@ -16,7 +16,7 @@ app = FastAPI(
 # Adding Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # TODO: This part need to be fixed so that not every domain can access the API, only the frontend domain should be able to access it. This is a security risk but for development purposes it's fine. We will fix this before deployment.
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

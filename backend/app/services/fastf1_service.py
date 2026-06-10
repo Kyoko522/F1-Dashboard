@@ -1,10 +1,12 @@
 # FastF1 service — all session loading, caching, and data extraction logic lives here.
-# NOTE: This file is 300+ lines. Consider splitting into session_cache.py and extractors.py.
+# TODO: This file is 300+ lines. Consider splitting into session_cache.py and extractors.py.
 
 import logging
-import os
-import threading
-from datetime import UTC, datetime
+import os   # TODO: Remove this as this can be automated into python using the lru_cache which is alreayd imported below
+import threading    # Allows multiple threads to run concurrently within a single process
+from datetime import UTC, datetime # Check the current time and date to match the API so data is available at the right time globally
+
+from functools import lru_cache  # TODO: Use this instead of the manual caching logic with _session_cache and _session_envents
 
 import fastf1
 import pandas as pd
@@ -16,6 +18,7 @@ CACHE_DIR = os.environ.get("FASTF1_CACHE_DIR", "/tmp/fastf1_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 fastf1.Cache.enable_cache(CACHE_DIR)
 
+# TODO: Remove this as we automate this caching process using the lru_cache decorator
 _session_cache: dict = {}
 _session_events: dict = {}  # session_key -> threading.Event while loading
 _lock = threading.Lock()
@@ -78,22 +81,42 @@ def _load_session(session_key: str) -> fastf1.core.Session:
                 del _session_events[session_key]
 
 
+# First method to be ran in the file 
 def get_sessions(year: int, session_type: str = "Race") -> list | None:
     try:
+        # fastf1.get_event_schedule(year) returns a pandas DataFrame — one row per race weekend.
+        #
+        # Identity columns:
+        #   RoundNumber       — position in the season (1, 2, 3…); 0 = pre-season testing
+        #   Country           — e.g. "Bahrain", "Australia"
+        #   Location          — city name e.g. "Sakhir", "Melbourne"
+        #   OfficialEventName — full name e.g. "Formula 1 Gulf Air Bahrain Grand Prix"
+        #   EventName         — short name e.g. "Bahrain Grand Prix"
+        #   EventDate         — date of the last session (usually race day)
+        #   EventFormat       — "conventional", "sprint_qualifying", etc.
+        #
+        # Session slots (up to 5 per weekend):
+        #   Session1 / Session1Date / Session1DateUtc  — e.g. "Practice 1"
+        #   Session2 / Session2Date / Session2DateUtc  — e.g. "Practice 2"
+        #   Session3 / Session3Date / Session3DateUtc  — e.g. "Practice 3"
+        #   Session4 / Session4Date / Session4DateUtc  — e.g. "Qualifying"
+        #   Session5 / Session5Date / Session5DateUtc  — e.g. "Race"
+        #
+        #   F1ApiSupport — True/False, whether F1's own API has data for this event
         schedule = fastf1.get_event_schedule(year)
-        schedule = schedule[schedule["RoundNumber"] > 0]
-        now = pd.Timestamp(datetime.now(UTC))
+        schedule = schedule[schedule["RoundNumber"] > 0]        # Panda filter values strictly greater than 0
+        now = pd.Timestamp(datetime.now(UTC))                   # Time in UTC Standard Time Zone 
         results = []
-        for _, event in schedule.iterrows():
+        for _, event in schedule.iterrows():                    # Panda function to loop row by row where _ is a number 0-n and event is the actual row data
             for col in ["Session1", "Session2", "Session3", "Session4", "Session5"]:
                 raw_type = event.get(col, "")
-                if not raw_type or pd.isna(raw_type):
+                if not raw_type or pd.isna(raw_type):                                           # Check: Does this session slot have anything in it
                     continue
-                if raw_type not in TYPE_MAP or raw_type != session_type:
+                if raw_type not in TYPE_MAP or raw_type != session_type:                        # Check: Is this the session type we asked for ('race', 'qualifying', etc.)
                     continue
                 date_col = f"{col}Date"
                 session_date = event.get(date_col)
-                if session_date is not None and not pd.isna(session_date):
+                if session_date is not None and not pd.isna(session_date):                      # Check: Did this session already happen? And is it complete with a date?
                     ts = pd.Timestamp(session_date)
                     if ts.tzinfo is None:
                         ts = ts.tz_localize("UTC")
@@ -104,6 +127,7 @@ def get_sessions(year: int, session_type: str = "Race") -> list | None:
                     {
                         "session_key": f"{year}_{int(event['RoundNumber'])}_{type_code}",
                         "country_name": event["Country"],
+                        "location": event["Location"],
                         "event_name": event["EventName"],
                         "round_number": int(event["RoundNumber"]),
                         "session_type": raw_type,
@@ -230,9 +254,9 @@ def get_track_outline(session_key: str) -> list:
         logger.error(f"Track outline failed for {session_key}: {e}")
         return []
 
-
+# Load session once and return drivers, positions, and track outline in one call.
+# This will run when a user has clicked on a session for the first time, so we can pre-load all the data we need
 def get_session_init(session_key: str) -> dict | None:
-    """Load session once and return drivers, positions, and track outline in one call."""
     try:
         drivers = get_drivers(session_key)
         positions = get_positions(session_key)
