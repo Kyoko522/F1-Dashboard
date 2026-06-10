@@ -8,10 +8,9 @@ from app.services.fastf1_service import get_drivers, get_session_init
 
 router = APIRouter(prefix="/api", tags=["drivers"])
 
-
+# Load a session once and return drivers, positions, and track outline in a single call
 @router.get("/session_init/{session_key}")
 async def api_session_init(session_key: str):
-    """Load a session once and return drivers, positions, and track outline in a single call."""
     try:
         result = await asyncio.to_thread(get_session_init, session_key)
         if result is None:
@@ -22,10 +21,9 @@ async def api_session_init(session_key: str):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
+# Return the list of drivers and their metadata for a session
 @router.get("/drivers/{session_key}")
 async def api_get_drivers(session_key: str):
-    """Return the list of drivers and their metadata for a session."""
     try:
         result = await asyncio.to_thread(get_drivers, session_key)
         if result is None:

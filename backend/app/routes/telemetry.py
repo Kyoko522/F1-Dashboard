@@ -1,4 +1,4 @@
-# Telemetry router — handles /api/location and /api/telemetry endpoints only.
+# Telemetry router — handles /api/location and /api/telemetry endpoints only. This will only run when a driver tel button is clicked
 
 import asyncio
 
