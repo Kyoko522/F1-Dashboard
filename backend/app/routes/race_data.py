@@ -1,4 +1,4 @@
-# Race data router — handles /api/positions, /api/laps, /api/stints, /api/pitstops.
+# Race data router — handles /api/positions, /api/laps, /api/stints, /api/pitstops. Essentially getting the telemetry of the each race and driver
 
 import asyncio
 
@@ -8,10 +8,9 @@ from app.services.fastf1_service import get_laps, get_pit_stops, get_positions, 
 
 router = APIRouter(prefix="/api", tags=["race_data"])
 
-
+# Return lap-by-lap race positions for all drivers in a session
 @router.get("/positions/{session_key}")
 async def api_get_positions(session_key: str):
-    """Return lap-by-lap race positions for all drivers in a session."""
     try:
         result = await asyncio.to_thread(get_positions, session_key)
         if result is None:
@@ -22,14 +21,9 @@ async def api_get_positions(session_key: str):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
+# Return lap times with tyre compound and stint info, optionally filtered by driver or lap
 @router.get("/laps/{session_key}")
-async def api_get_laps(
-    session_key: str,
-    driver_number: int | None = None,
-    lap_number: int | None = None,
-):
-    """Return lap times with tyre compound and stint info, optionally filtered by driver or lap."""
+async def api_get_laps(session_key: str, driver_number: int | None = None, lap_number: int | None = None,):
     try:
         result = await asyncio.to_thread(get_laps, session_key, driver_number, lap_number)
         if result is None:
@@ -40,10 +34,9 @@ async def api_get_laps(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
+# Return aggregated tyre stint data per driver, optionally filtered by driver
 @router.get("/stints/{session_key}")
 async def api_get_stints(session_key: str, driver_number: int | None = None):
-    """Return aggregated tyre stint data per driver, optionally filtered by driver."""
     try:
         result = await asyncio.to_thread(get_stints, session_key, driver_number)
         if result is None:
@@ -54,10 +47,9 @@ async def api_get_stints(session_key: str, driver_number: int | None = None):
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
-
+# Return pit stop events with lap number and duration, optionally filtered by driver
 @router.get("/pitstops/{session_key}")
 async def api_get_pitstops(session_key: str, driver_number: int | None = None):
-    """Return pit stop events with lap number and duration, optionally filtered by driver."""
     try:
         result = await asyncio.to_thread(get_pit_stops, session_key, driver_number)
         if result is None:
